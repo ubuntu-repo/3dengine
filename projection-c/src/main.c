@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL2_gfxPrimitives.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Define constants for FPS and game loop frame time
@@ -99,18 +98,25 @@ void process_input(void) {
             game_is_running = FALSE;
             break;
         case SDL_KEYDOWN:
+            // quit game
             if (event.key.keysym.sym == SDLK_ESCAPE)
                 game_is_running = FALSE;
-            if (event.key.keysym.sym == SDLK_LEFT)
-                camera_rotation.y += 0.03;
-            if (event.key.keysym.sym == SDLK_RIGHT)
-                camera_rotation.y -= 0.03;
-            if (event.key.keysym.sym == SDLK_UP)
+            // x-y-z camera rotation
+            if (event.key.keysym.sym == SDLK_1)
                 camera_rotation.x += 0.03;
-            if (event.key.keysym.sym == SDLK_DOWN)
+            if (event.key.keysym.sym == SDLK_2)
                 camera_rotation.x -= 0.03;
-            if (event.key.keysym.sym == SDLK_a)
-                camera_distortion += 10.0;
+            if (event.key.keysym.sym == SDLK_3)
+                camera_rotation.y += 0.03;
+            if (event.key.keysym.sym == SDLK_4)
+                camera_rotation.y -= 0.03;
+            if (event.key.keysym.sym == SDLK_5)
+                camera_rotation.z += 0.03;
+            if (event.key.keysym.sym == SDLK_6)
+                camera_rotation.z -= 0.03;
+            // camera distance
+            if (event.key.keysym.sym == SDLK_w)
+                camera_position.z += 0.1;
             if (event.key.keysym.sym == SDLK_s)
                 camera_position.z -= 0.1;
             break;
@@ -145,9 +151,6 @@ void update(void) {
     // Waste some time / sleep until we reach the frame target time
     while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame_time + FRAME_TARGET_TIME));
 
-    // Get a delta time factor converted to seconds to be used to update my objects
-    float delta_time = (SDL_GetTicks() - last_frame_time) / 1000.0f;
-
     // Store the milliseconds of the current frame
     last_frame_time = SDL_GetTicks();
 
@@ -168,6 +171,15 @@ point2d project(point3d point) {
 ///////////////////////////////////////////////////////////////////////////////
 // Functions to rotate 3D points in X, Y, and Z
 ///////////////////////////////////////////////////////////////////////////////
+point3d rotate_x(point3d point, float angle) {
+    point3d rotated_point = {
+        .x = point.x,
+        .y = cos(angle) * point.y - sin(angle) * point.z,
+        .z = sin(angle) * point.y + cos(angle) * point.z
+    };
+    return rotated_point;
+}
+
 point3d rotate_y(point3d point, float angle) {
     point3d rotated_point = {
         .x = cos(angle) * point.x - sin(angle) * point.z,
@@ -177,11 +189,11 @@ point3d rotate_y(point3d point, float angle) {
     return rotated_point;
 }
 
-point3d rotate_x(point3d point, float angle) {
+point3d rotate_z(point3d point, float angle) {
     point3d rotated_point = {
-        .x = point.x,
-        .y = cos(angle) * point.y - sin(angle) * point.z,
-        .z = sin(angle) * point.y + cos(angle) * point.z
+        .x = cos(angle) * point.x - sin(angle) * point.y,
+        .y = sin(angle) * point.x + cos(angle) * point.y,
+        .z = point.z
     };
     return rotated_point;
 }
@@ -198,8 +210,12 @@ void render(void) {
         point3d point = cube_points[i];
 
         // rotate the original 3d point in the x and y axis
-        point3d rotated_point = rotate_y(rotate_x(point, camera_rotation.x), camera_rotation.y);
+        point3d rotated_point = point;
+        rotated_point = rotate_x(rotated_point, camera_rotation.x);
+        rotated_point = rotate_y(rotated_point, camera_rotation.y);
+        rotated_point = rotate_z(rotated_point, camera_rotation.z);
 
+        // apply the camera transform
         rotated_point.x -= camera_position.x;
         rotated_point.y -= camera_position.y;
         rotated_point.z -= camera_position.z;
