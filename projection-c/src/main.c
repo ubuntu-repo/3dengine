@@ -28,15 +28,15 @@ typedef struct {
 } point3d;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Declare an array of points
+// Declare an array of points of a 5 x 5 x 5 cube
 ///////////////////////////////////////////////////////////////////////////////
-const int N_POINTS = 9 * 9 * 9; // 9 x 9 x 9 cube
+const int N_POINTS = 5 * 5 * 5;
 point3d cube_points[N_POINTS];
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declare the camera position, rotation, and FOV distortion variables
 ///////////////////////////////////////////////////////////////////////////////
-float camera_distortion = 640.0f;
+float fov_factor = 640.0f;
 point3d camera_position = { .x = 0, .y = 0, .z = -5 };
 point3d camera_rotation = { .x = 0, .y = 0, .z = 0 };
 
@@ -102,23 +102,14 @@ void process_input(void) {
             if (event.key.keysym.sym == SDLK_ESCAPE)
                 game_is_running = FALSE;
             // x-y-z camera rotation
-            if (event.key.keysym.sym == SDLK_1)
-                camera_rotation.x += 0.03;
-            if (event.key.keysym.sym == SDLK_2)
-                camera_rotation.x -= 0.03;
-            if (event.key.keysym.sym == SDLK_3)
-                camera_rotation.y += 0.03;
-            if (event.key.keysym.sym == SDLK_4)
-                camera_rotation.y -= 0.03;
-            if (event.key.keysym.sym == SDLK_5)
-                camera_rotation.z += 0.03;
-            if (event.key.keysym.sym == SDLK_6)
-                camera_rotation.z -= 0.03;
-            // camera distance
             if (event.key.keysym.sym == SDLK_w)
-                camera_position.z += 0.1;
+                camera_rotation.x += 0.02;
             if (event.key.keysym.sym == SDLK_s)
-                camera_position.z -= 0.1;
+                camera_rotation.x -= 0.02;
+            if (event.key.keysym.sym == SDLK_a)
+                camera_rotation.y += 0.02;
+            if (event.key.keysym.sym == SDLK_d)
+                camera_rotation.y -= 0.02;
             break;
     }
 }
@@ -131,8 +122,8 @@ void setup(void) {
 
     // The cube goes from -1 to 1
     // That means that our cube has edges with length 2
-    // 9 x 9 x 9 cube
-    float increment_step = 0.25;
+    // 5 x 5 x 5 cube
+    float increment_step = 0.50;
     for (float x = -1; x <= 1; x += increment_step) {
         for (float y = -1; y <= 1; y += increment_step) {
             for (float z = -1; z <= 1; z += increment_step) {
@@ -162,8 +153,8 @@ void update(void) {
 ///////////////////////////////////////////////////////////////////////////////
 point2d project(point3d point) {
     point2d projected_point = {
-        .x = (camera_distortion * (point.x - camera_position.x)) / point.z,
-        .y = (camera_distortion * (point.y - camera_position.y)) / point.z
+        .x = (fov_factor * (point.x - camera_position.x)) / point.z,
+        .y = (fov_factor * (point.y - camera_position.y)) / point.z
     };
     return projected_point;
 }
@@ -209,7 +200,7 @@ void render(void) {
     for (int i = 0; i < N_POINTS; i++) {
         point3d point = cube_points[i];
 
-        // rotate the original 3d point in the x and y axis
+        // rotate the original 3d point in the x, y, and z axis
         point3d rotated_point = point;
         rotated_point = rotate_x(rotated_point, camera_rotation.x);
         rotated_point = rotate_y(rotated_point, camera_rotation.y);
@@ -226,8 +217,8 @@ void render(void) {
         SDL_Rect point_rect = {
             projected_point.x + window_width / 2,
             projected_point.y + window_height / 2,
-            8 - (rotated_point.z * 1.2), // closer points appear bigger
-            8 - (rotated_point.z * 1.2)  // closer points appear bigger
+            10 - (rotated_point.z * 1.5), // closer points appear bigger
+            10 - (rotated_point.z * 1.5)  // closer points appear bigger
         };
         SDL_RenderFillRect(renderer, &point_rect);
     }
