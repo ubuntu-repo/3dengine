@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <SDL2/SDL.h>
-#include "./constants.h"
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Define constants for FPS and game loop frame time
@@ -155,24 +155,6 @@ void update(void) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Functions to render points, lines, and triangles
-///////////////////////////////////////////////////////////////////////////////
-void render_point(int x, int y, int width, int height) {
-    SDL_Rect point = {x, y, width, height};
-    SDL_RenderFillRect(renderer, &point);
-}
-
-void render_line(int x0, int y0, int x1, int y1) {
-    SDL_RenderDrawLine(renderer, x0, y0, x1, y1);
-}
-
-void render_triangle(int x0, int y0, int x1, int y1, int x2, int y2) {
-    render_line(x0, y0, x1, y1);
-    render_line(x1, y1, x2, y2);
-    render_line(x2, y2, x0, y0);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Function that receives a 3D point and returns a projected 2D point
 ///////////////////////////////////////////////////////////////////////////////
 point2d project(point3d point) {
@@ -225,12 +207,13 @@ void render(void) {
         // receives a point3d and returns a point2d projection
         point2d projected_point = project(rotated_point);
 
-        render_point(
+        SDL_Rect point_rect = {
             projected_point.x + window_width / 2,
             projected_point.y + window_height / 2,
             8 - (rotated_point.z * 1.2), // closer points appear bigger
             8 - (rotated_point.z * 1.2)  // closer points appear bigger
-        );
+        };
+        SDL_RenderFillRect(renderer, &point_rect);
     }
 
     SDL_RenderPresent(renderer);
