@@ -33,6 +33,7 @@ typedef struct {
     int b;
     int c;
     int face_index;
+    uint32_t color;
 } triangle;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -55,23 +56,23 @@ point2d projected_points[N_CUBE_VERTICES];
 const unsigned int N_CUBE_TRIANGLES = 6 * 2; // 6 faces, 2 triangles per face
 triangle cube_triangles[N_CUBE_TRIANGLES] = {
     // front
-    { .a = 0, .b = 1, .c = 2, .face_index =  1 },
-    { .a = 2, .b = 3, .c = 0, .face_index =  1 },
+    { .a = 0, .b = 1, .c = 2, .face_index =  1, .color = 0xFFFF0000 },
+    { .a = 2, .b = 3, .c = 0, .face_index =  1, .color = 0xFFFF0000 },
     // top
-    { .a = 1, .b = 5, .c = 6, .face_index =  2 },
-    { .a = 6, .b = 2, .c = 1, .face_index =  2 },
+    { .a = 1, .b = 5, .c = 6, .face_index =  2, .color = 0xFF00FF00 },
+    { .a = 6, .b = 2, .c = 1, .face_index =  2, .color = 0xFF00FF00 },
     // back
-    { .a = 5, .b = 4, .c = 7, .face_index =  3 },
-    { .a = 7, .b = 6, .c = 5, .face_index =  3 },
+    { .a = 5, .b = 4, .c = 7, .face_index =  3, .color = 0xFF0000FF },
+    { .a = 7, .b = 6, .c = 5, .face_index =  3, .color = 0xFF0000FF },
     // bottom
-    { .a = 4, .b = 0, .c = 3, .face_index =  4 },
-    { .a = 3, .b = 7, .c = 4, .face_index =  4 },
+    { .a = 4, .b = 0, .c = 3, .face_index =  4, .color = 0xFFFFFF00 },
+    { .a = 3, .b = 7, .c = 4, .face_index =  4, .color = 0xFFFFFF00 },
     // right
-    { .a = 3, .b = 2, .c = 6, .face_index =  5 },
-    { .a = 6, .b = 7, .c = 3, .face_index =  5 },
+    { .a = 3, .b = 2, .c = 6, .face_index =  5, .color = 0xFF00FFFF },
+    { .a = 6, .b = 7, .c = 3, .face_index =  5, .color = 0xFF00FFFF },
     // left
-    { .a = 0, .b = 5, .c = 1, .face_index =  6 },
-    { .a = 0, .b = 4, .c = 5, .face_index =  6 }
+    { .a = 0, .b = 5, .c = 1, .face_index =  6, .color = 0xFFFFFFFF },
+    { .a = 0, .b = 4, .c = 5, .face_index =  6, .color = 0xFFFFFFFF }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -247,12 +248,12 @@ void render(void) {
 
         // Draw a trigon (triangle) from point a, b, and c
         // Also translates/moves them to the center of the screen
-        trigonRGBA(
+        filledTrigonColor(
             renderer,
             point_a.x + (window_width / 2), point_a.y + (window_height / 2),
             point_b.x + (window_width / 2), point_b.y + (window_height / 2),
             point_c.x + (window_width / 2), point_c.y + (window_height / 2),
-            255, 255, 255, 255
+            cube_triangles[i].color
         );
     }
 
