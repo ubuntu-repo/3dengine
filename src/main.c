@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <math.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL2_gfxPrimitives.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Define two macros to return the max and min between two values
