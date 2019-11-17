@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Define two macros to return the max and min between two values
@@ -261,15 +262,24 @@ void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t colo
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Returns true if vertices are in clockwise order
+////////////////////////////////////////////////////////////////////////////////
+bool is_cw(point2d a, point2d b, point2d c) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) >= 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Perpendicular dot product between two 2D vectors
 ///////////////////////////////////////////////////////////////////////////////
-float cross_z(point2d a, point2d b, point2d c) {
-    // flip y because of the coordinate system
-    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+float cross_z(point2d a, point2d b, point2d c, bool invert_cw_points) {
+    if (invert_cw_points)
+        return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    else
+        return (b.x - a.x) * -(c.y - a.y) - -(b.y - a.y) * (c.x - a.x);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Draw an unfilled triangle using raw line calls
+// Draw a filled triangle
 ///////////////////////////////////////////////////////////////////////////////
 void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
     // get the bounding box of the triangle
@@ -282,16 +292,18 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
     point2d v1 = { .x = x1, .y = y1 };
     point2d v2 = { .x = x2, .y = y2 };
 
+    bool cw = is_cw(v0, v1, v2);
+
     for (int x = min_x; x < max_x; x++) {
         for (int y = min_y; y < max_y; y++) {
             // sample from the center of the pixel, not the top-left corner
             point2d p = { .x = x + 0.5, .y = y + 0.5 };
+
             // if the point is not inside our polygon, skip fragment
-            if (cross_z(v1, v2, p) < 0 || cross_z(v2, v0, p) < 0 || cross_z(v0, v1, p) < 0) {
+            if (cross_z(v1, v2, p, cw) < 0 || cross_z(v2, v0, p, cw) < 0 || cross_z(v0, v1, p, cw) < 0)
                 continue;
-            } else {
+            else
                 draw_pixel(x, y, color);
-            }
         }
     }
 }
@@ -433,7 +445,19 @@ void render(void) {
                 triangle_color
             );
             // Draw triangle face lines
-            // draw_triangle(
+            draw_triangle(
+                point_a.x + (window_width / 2),
+                point_a.y + (window_height / 2),
+                point_b.x + (window_width / 2),
+                point_b.y + (window_height / 2),
+                point_c.x + (window_width / 2),
+                point_c.y + (window_height / 2),
+                triangle_color
+            );
+
+            // Render a filled triangle using the SDL2_gfx library
+            // filledTrigonColor(
+            //     renderer,
             //     point_a.x + (window_width / 2),
             //     point_a.y + (window_height / 2),
             //     point_b.x + (window_width / 2),
