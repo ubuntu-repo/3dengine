@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Define two macros to return the max and min between two values
@@ -45,8 +46,8 @@ typedef struct {
 ///////////////////////////////////////////////////////////////////////////////
 // Declare cube vertices and triangles
 ///////////////////////////////////////////////////////////////////////////////
-const unsigned int N_CUBE_VERTICES = 8;
-point3d cube_vertices[N_CUBE_VERTICES] = {
+const unsigned int N_VERTICES = 8;
+point3d vertex_list[N_VERTICES] = {
     { .x = -1, .y = -1, .z =  1},
     { .x = -1, .y =  1, .z =  1},
     { .x =  1, .y =  1, .z =  1},
@@ -57,10 +58,8 @@ point3d cube_vertices[N_CUBE_VERTICES] = {
     { .x =  1, .y = -1, .z = -1}
 };
 
-point2d projected_points[N_CUBE_VERTICES];
-
-const unsigned int N_CUBE_TRIANGLES = 6 * 2; // 6 faces, 2 triangles per face
-triangle cube_triangles[N_CUBE_TRIANGLES] = {
+const unsigned int N_TRIANGLES = 6 * 2; // 6 faces, 2 triangles per face
+triangle triangle_list[N_TRIANGLES] = {
     // front
     { .a = 0, .b = 1, .c = 2, .face_index =  1, .color = 0xFFFF0000 },
     { .a = 2, .b = 3, .c = 0, .face_index =  1, .color = 0xFFFF0000 },
@@ -80,6 +79,13 @@ triangle cube_triangles[N_CUBE_TRIANGLES] = {
     { .a = 0, .b = 5, .c = 1, .face_index =  6, .color = 0xFFFFFFFF },
     { .a = 0, .b = 4, .c = 5, .face_index =  6, .color = 0xFFFFFFFF }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+// Array of updated vertices, triangle faces, and vertex depth values
+///////////////////////////////////////////////////////////////////////////////
+point2d projected_points[N_VERTICES];
+float vertex_depth_list[N_VERTICES];
+point3d working_vertex_list[N_VERTICES];
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declare the camera position, rotation, and FOV distortion variables
@@ -108,30 +114,30 @@ SDL_Texture* color_buffer_texture;
 // Functions to rotate 3D points in X, Y, and Z
 ///////////////////////////////////////////////////////////////////////////////
 point3d rotate_x(point3d point, float angle) {
-    point3d rotated_point = {
+    point3d working_vertex = {
         .x = point.x,
         .y = cos(angle) * point.y - sin(angle) * point.z,
         .z = sin(angle) * point.y + cos(angle) * point.z
     };
-    return rotated_point;
+    return working_vertex;
 }
 
 point3d rotate_y(point3d point, float angle) {
-    point3d rotated_point = {
+    point3d working_vertex = {
         .x = cos(angle) * point.x - sin(angle) * point.z,
         .y = point.y,
         .z = sin(angle) * point.x + cos(angle) * point.z
     };
-    return rotated_point;
+    return working_vertex;
 }
 
 point3d rotate_z(point3d point, float angle) {
-    point3d rotated_point = {
+    point3d working_vertex = {
         .x = cos(angle) * point.x - sin(angle) * point.y,
         .y = sin(angle) * point.x + cos(angle) * point.y,
         .z = point.z
     };
-    return rotated_point;
+    return working_vertex;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -201,56 +207,6 @@ void process_input(void) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Setup function to initialize game objects and game state
-///////////////////////////////////////////////////////////////////////////////
-void setup(void) {
-    color_buffer = (uint32_t *) malloc(sizeof(uint32_t) * (uint32_t)window_width * (uint32_t) window_height);
-
-    color_buffer_texture = SDL_CreateTexture(
-        renderer,
-        SDL_PIXELFORMAT_ARGB8888,
-        SDL_TEXTUREACCESS_STREAMING,
-        window_width,
-        window_height
-    );
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Update function with a fixed time step
-///////////////////////////////////////////////////////////////////////////////
-void update(void) {
-    // Waste some time / sleep until we reach the frame target time
-    while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame_time + FRAME_TARGET_TIME));
-
-    // Get a delta time factor converted to seconds to be used to update my objects
-    float delta_time = (SDL_GetTicks() - last_frame_time) / 1000.0f;
-
-    // Store the milliseconds of the current frame
-    last_frame_time = SDL_GetTicks();
-
-    // Loop all cube vertices, rotating and projecting them
-    for (int i = 0; i < N_CUBE_VERTICES; i++) {
-        point3d point = cube_vertices[i];
-
-        // rotate the original 3d point in the x, y, and z axis
-        point3d rotated_point = point;
-        rotated_point = rotate_x(rotated_point, cube_rotation.x += 0.05 * delta_time);
-        rotated_point = rotate_y(rotated_point, cube_rotation.y += 0.05 * delta_time);
-        rotated_point = rotate_z(rotated_point, cube_rotation.z += 0.05 * delta_time);
-
-        // apply the camera transform
-        rotated_point.x -= camera_position.x;
-        rotated_point.y -= camera_position.y;
-        rotated_point.z -= camera_position.z;
-
-        // receives a point3d and returns a point2d projection
-        point2d projected_point = project(rotated_point);
-
-        projected_points[i] = projected_point;
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Renders the color buffer array in a texture and displays it
 ///////////////////////////////////////////////////////////////////////////////
 void render_color_buffer() {
@@ -258,6 +214,9 @@ void render_color_buffer() {
     SDL_RenderCopy(renderer, color_buffer_texture, NULL, NULL);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Routine to clear the entire color buffer with a single color value
+///////////////////////////////////////////////////////////////////////////////
 void clear_color_buffer(uint32_t color) {
     for (int x = 0; x < window_width; x++)
         for (int y = 0; y < window_height; y++)
@@ -265,7 +224,7 @@ void clear_color_buffer(uint32_t color) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Render drawing primitives
+// Set a pixel with a given colour
 ///////////////////////////////////////////////////////////////////////////////
 void draw_pixel(int x, int y, uint32_t color) {
     color_buffer[(window_width * y) + x] = color;
@@ -274,7 +233,7 @@ void draw_pixel(int x, int y, uint32_t color) {
 ///////////////////////////////////////////////////////////////////////////////
 // Render a line using the inneficient DDA line drawing algorithm
 ///////////////////////////////////////////////////////////////////////////////
-void dda_line(int x1, int y1, int x2, int y2, uint32_t color) {
+void draw_line(int x1, int y1, int x2, int y2, uint32_t color) {
     int delta_x = (x2 - x1);
     int delta_y = (y2 - y1);
 
@@ -294,83 +253,20 @@ void dda_line(int x1, int y1, int x2, int y2, uint32_t color) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Render a line using the Bresenham line drawing algorithm
-///////////////////////////////////////////////////////////////////////////////
-void plot_line_low(int x0, int y0, int x1, int y1, uint32_t color) {
-    int dx = (x1 - x0);
-    int dy = (y1 - y0);
-    int yi = 1;
-
-    if (dy < 0) {
-        yi = -1;
-        dy = -dy;
-    }
-
-    int D = (2 * dy) - dx;
-    int y = y0;
-
-    for (int x = x0; x <= x1; ++x) {
-        draw_pixel(x, y, color);
-        if (D > 0) {
-            y = y + yi;
-            D = D - (2 * dx);
-        }
-        D = D + 2*dy;
-    }
-}
-
-void plot_line_high(int x0, int y0, int x1, int y1, uint32_t color) {
-    int dx = (x1 - x0);
-    int dy = (y1 - y0);
-    int xi = 1;
-
-    if (dx < 0) {
-        xi = -1;
-        dx = -dx;
-    }
-
-    int D = (2 * dx) - dy;
-    int x = x0;
-
-    for (int y = y0; y <= y1; ++y) {
-        draw_pixel(x, y, color);
-        if (D > 0) {
-            x = x + xi;
-            D = D - (2 * dy);
-        }
-        D = D + (2 * dx);
-    }
-}
-
-void bresenham_line(int x0, int y0, int x1, int y1, uint32_t color) {
-    if (abs(y1 - y0) < abs(x1 - x0)) {
-        if (x0 > x1)
-            plot_line_low(x1, y1, x0, y0, color);
-        else
-            plot_line_low(x0, y0, x1, y1, color);
-    } else {
-        if (y0 > y1)
-            plot_line_high(x1, y1, x0, y0, color);
-        else
-            plot_line_high(x0, y0, x1, y1, color);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Draw an unfilled triangle using raw line calls
 ///////////////////////////////////////////////////////////////////////////////
 void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
-    bresenham_line(x0, y0, x1, y1, color);
-    bresenham_line(x1, y1, x2, y2, color);
-    bresenham_line(x2, y2, x0, y0, color);
+    draw_line(x0, y0, x1, y1, color);
+    draw_line(x1, y1, x2, y2, color);
+    draw_line(x2, y2, x0, y0, color);
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Perpendicular dot product between two 2D vectors
 ///////////////////////////////////////////////////////////////////////////////
 float cross_z(point2d a, point2d b, point2d c) {
     // flip y because of the coordinate system
-    return (b.x - a.x) * -(c.y - a.y) - -(b.y - a.y) * (c.x - a.x);
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -402,6 +298,88 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Setup function to initialize game objects and game state
+///////////////////////////////////////////////////////////////////////////////
+void setup(void) {
+    color_buffer = (uint32_t *) malloc(sizeof(uint32_t) * (uint32_t)window_width * (uint32_t) window_height);
+
+    color_buffer_texture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_ARGB8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        window_width,
+        window_height
+    );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Update function with a fixed time step
+///////////////////////////////////////////////////////////////////////////////
+void update(void) {
+    // Waste some time / sleep until we reach the frame target time
+    while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame_time + FRAME_TARGET_TIME));
+
+    // Get a delta time factor converted to seconds to be used to update my objects
+    float delta_time = (SDL_GetTicks() - last_frame_time) / 1000.0f;
+
+    // Store the milliseconds of the current frame
+    last_frame_time = SDL_GetTicks();
+
+    // Loop all cube vertices, rotating and projecting them
+    for (int i = 0; i < N_VERTICES; i++) {
+        point3d current_point = vertex_list[i];
+
+        // rotate the original 3d point in the x, y, and z axis
+        point3d working_vertex = current_point;
+        working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.03 * delta_time);
+        working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.05 * delta_time);
+        working_vertex = rotate_z(working_vertex, cube_rotation.z += 0.07 * delta_time);
+
+        // apply the camera transform
+        working_vertex.x -= camera_position.x;
+        working_vertex.y -= camera_position.y;
+        working_vertex.z -= camera_position.z;
+
+        // receives a point3d and returns a point2d projection
+        point2d projected_point = project(working_vertex);
+
+        // save the 2d projected points
+        projected_points[i] = projected_point;
+
+        // save rotated vertex in a list
+        working_vertex_list[i] = working_vertex;
+
+        // save the depth of all vertices
+        vertex_depth_list[i] = working_vertex.z;
+    }
+
+    // calculate the average z-depth of each triangle
+    float average_depth_list[N_TRIANGLES];
+    for (int i = 0; i < N_TRIANGLES; i++) {
+        average_depth_list[i] = vertex_depth_list[triangle_list[i].a];
+        average_depth_list[i] += vertex_depth_list[triangle_list[i].b];
+        average_depth_list[i] += vertex_depth_list[triangle_list[i].c];
+        average_depth_list[i] /= 3.0;
+    }
+
+    // sort triangles by their average depth value
+    for (int i = 0; i < N_TRIANGLES; i++) {
+        for (int j = 0; j < N_TRIANGLES - 1; j++) {
+            if (average_depth_list[i] > average_depth_list[j]) {
+                // swap the triangls in the original triangle list
+                triangle temp_triangle = triangle_list[i];
+                triangle_list[i] = triangle_list[j];
+                triangle_list[j] = temp_triangle;
+                // also swap the depth value in the depth array
+                float temp_depth = average_depth_list[i];
+                average_depth_list[i] = average_depth_list[j];
+                average_depth_list[j] = temp_depth;
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Render function to draw game objects in the display
 ///////////////////////////////////////////////////////////////////////////////
 void render(void) {
@@ -409,34 +387,63 @@ void render(void) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    // Loop all cube face triangles
-    for (int i = 0; i < N_CUBE_TRIANGLES; i++) {
-        point2d point_a = projected_points[cube_triangles[i].a];
-        point2d point_b = projected_points[cube_triangles[i].b];
-        point2d point_c = projected_points[cube_triangles[i].c];
-        uint32_t triangle_color = cube_triangles[i].color;
+    // Loop all cube face triangles to render them one by one
+    for (int i = 0; i < N_TRIANGLES; i++) {
+        point2d point_a = projected_points[triangle_list[i].a];
+        point2d point_b = projected_points[triangle_list[i].b];
+        point2d point_c = projected_points[triangle_list[i].c];
+        uint32_t triangle_color = triangle_list[i].color;
 
-        // Draw a filled triangle and translates it to the screen center
-        draw_filled_triangle(
-            point_a.x + (window_width / 2),
-            point_a.y + (window_height / 2),
-            point_b.x + (window_width / 2),
-            point_b.y + (window_height / 2),
-            point_c.x + (window_width / 2),
-            point_c.y + (window_height / 2),
-            triangle_color
-        );
+        // get back the vertices of each triangle face
+        point3d v0 = working_vertex_list[triangle_list[i].a];
+        point3d v1 = working_vertex_list[triangle_list[i].b];
+        point3d v2 = working_vertex_list[triangle_list[i].c];
 
-        // Draw triangle lines and translate them to the screen center
-        draw_triangle(
-            point_a.x + (window_width / 2),
-            point_a.y + (window_height / 2),
-            point_b.x + (window_width / 2),
-            point_b.y + (window_height / 2),
-            point_c.x + (window_width / 2),
-            point_c.y + (window_height / 2),
-            0x00000000
-        );
+        // Find the first vector and second vector
+        point3d vector_ab = { .x = v1.x - v0.x, .y = v1.y - v0.y, .z = v1.z - v0.z };
+        point3d vector_ac = { .x = v2.x - v0.x, .y = v2.y - v0.y, .z = v2.z - v0.z };
+
+        // Normalize the vectors
+        float length_ab = sqrt(vector_ab.x * vector_ab.x + vector_ab.y * vector_ab.y + vector_ab.z * vector_ab.z);
+        vector_ab.x = vector_ab.x / length_ab;
+        vector_ab.y = vector_ab.y / length_ab;
+        vector_ab.z = vector_ab.z / length_ab;
+
+        float length_ac = sqrt(vector_ac.x * vector_ac.x + vector_ac.y * vector_ac.y + vector_ac.z * vector_ac.z);
+        vector_ac.x = vector_ac.x / length_ac;
+        vector_ac.y = vector_ac.y / length_ac;
+        vector_ac.z = vector_ac.z / length_ac;
+
+        // Compute the surface normal (through cross-product)
+        point3d vector_out_normal = {
+            .x = (vector_ab.y * vector_ac.z - vector_ab.z * vector_ac.y),
+            .y = (vector_ab.z * vector_ac.x - vector_ab.x * vector_ac.z),
+            .z = (vector_ab.x * vector_ac.y - vector_ab.y * vector_ac.x)
+        };
+
+        // only render the triangle that has a positive-z-poiting normal
+        if (vector_out_normal.z > 0) {
+            // Draw a filled triangle and translates it to the screen center
+            draw_filled_triangle(
+                point_a.x + (window_width / 2),
+                point_a.y + (window_height / 2),
+                point_b.x + (window_width / 2),
+                point_b.y + (window_height / 2),
+                point_c.x + (window_width / 2),
+                point_c.y + (window_height / 2),
+                triangle_color
+            );
+            // Draw triangle face lines
+            // draw_triangle(
+            //     point_a.x + (window_width / 2),
+            //     point_a.y + (window_height / 2),
+            //     point_b.x + (window_width / 2),
+            //     point_b.y + (window_height / 2),
+            //     point_c.x + (window_width / 2),
+            //     point_c.y + (window_height / 2),
+            //     triangle_color
+            // );
+        }
     }
 
     // Render the color buffer using a SDL texture
