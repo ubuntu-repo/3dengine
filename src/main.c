@@ -27,13 +27,13 @@ typedef enum { FALSE, TRUE } bool;
 typedef struct {
     float x;
     float y;
-} point2d;
+} vector2d;
 
 typedef struct {
     float x;
     float y;
     float z;
-} point3d;
+} vector3d;
 
 typedef struct {
     int a;
@@ -47,7 +47,7 @@ typedef struct {
 // Declare cube vertices and triangles
 ///////////////////////////////////////////////////////////////////////////////
 const unsigned int N_VERTICES = 8;
-point3d vertex_list[N_VERTICES] = {
+vector3d vertex_list[N_VERTICES] = {
     { .x = -1, .y = -1, .z =  1},
     { .x = -1, .y =  1, .z =  1},
     { .x =  1, .y =  1, .z =  1},
@@ -83,16 +83,17 @@ triangle triangle_list[N_TRIANGLES] = {
 ///////////////////////////////////////////////////////////////////////////////
 // Array of updated vertices, triangle faces, and vertex depth values
 ///////////////////////////////////////////////////////////////////////////////
-point2d projected_points[N_VERTICES];
+vector2d projected_points[N_VERTICES];
 float vertex_depth_list[N_VERTICES];
-point3d working_vertex_list[N_VERTICES];
+vector3d working_vertex_list[N_VERTICES];
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declare the camera position, rotation, and FOV distortion variables
 ///////////////////////////////////////////////////////////////////////////////
 float fov_factor = 640.0f;
-point3d camera_position = { .x = 0, .y = 0, .z = -5 };
-point3d cube_rotation = { .x = 0, .y = 0, .z = 0 };
+vector3d camera_position = { .x = 0, .y = 0, .z = 0 };
+vector3d cube_position = { .x = 0, .y = 0, .z = -5 };
+vector3d cube_rotation = { .x = 0, .y = 0, .z = 0 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Global variables for SDL Window, Renderer, and game status
@@ -113,8 +114,8 @@ SDL_Texture* color_buffer_texture;
 ///////////////////////////////////////////////////////////////////////////////
 // Functions to rotate 3D points in X, Y, and Z
 ///////////////////////////////////////////////////////////////////////////////
-point3d rotate_x(point3d point, float angle) {
-    point3d working_vertex = {
+vector3d rotate_x(vector3d point, float angle) {
+    vector3d working_vertex = {
         .x = point.x,
         .y = cos(angle) * point.y - sin(angle) * point.z,
         .z = sin(angle) * point.y + cos(angle) * point.z
@@ -122,8 +123,8 @@ point3d rotate_x(point3d point, float angle) {
     return working_vertex;
 }
 
-point3d rotate_y(point3d point, float angle) {
-    point3d working_vertex = {
+vector3d rotate_y(vector3d point, float angle) {
+    vector3d working_vertex = {
         .x = cos(angle) * point.x - sin(angle) * point.z,
         .y = point.y,
         .z = sin(angle) * point.x + cos(angle) * point.z
@@ -131,8 +132,8 @@ point3d rotate_y(point3d point, float angle) {
     return working_vertex;
 }
 
-point3d rotate_z(point3d point, float angle) {
-    point3d working_vertex = {
+vector3d rotate_z(vector3d point, float angle) {
+    vector3d working_vertex = {
         .x = cos(angle) * point.x - sin(angle) * point.y,
         .y = sin(angle) * point.x + cos(angle) * point.y,
         .z = point.z
@@ -143,8 +144,8 @@ point3d rotate_z(point3d point, float angle) {
 ///////////////////////////////////////////////////////////////////////////////
 // Function that receives a 3D point and returns a projected 2D point
 ///////////////////////////////////////////////////////////////////////////////
-point2d project(point3d point) {
-    point2d projected_point = {
+vector2d project(vector3d point) {
+    vector2d projected_point = {
         .x = (fov_factor * (point.x - camera_position.x)) / point.z,
         .y = (fov_factor * (point.y - camera_position.y)) / point.z
     };
@@ -262,16 +263,49 @@ void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t colo
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Normalize a vector
+////////////////////////////////////////////////////////////////////////////////
+void normalize(vector3d* vector) {
+    float length = sqrt(
+        (vector->x * vector->x) +
+        (vector->y * vector->y) +
+        (vector->z * vector->z)
+    );
+    vector->x /= length;
+    vector->y /= length;
+    vector->z /= length;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Dot product between two vectors
+////////////////////////////////////////////////////////////////////////////////
+uint32_t apply_light(uint32_t color, float percentage_factor) {
+    uint32_t a = (color & 0xFF000000);
+    uint32_t r = (color & 0x00FF0000) * percentage_factor;
+    uint32_t g = (color & 0x0000FF00) * percentage_factor;
+    uint32_t b = (color & 0x000000FF) * percentage_factor;
+    uint32_t new_color = a | (r & 0x00FF0000) | (g & 0x0000FF00) | (b & 0x000000FF);
+    return new_color;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Dot product between two vectors
+////////////////////////////////////////////////////////////////////////////////
+float dot(vector3d a, vector3d b) {
+    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Returns true if vertices are in clockwise order
 ////////////////////////////////////////////////////////////////////////////////
-bool is_cw(point2d a, point2d b, point2d c) {
+bool is_cw(vector2d a, vector2d b, vector2d c) {
     return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) >= 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Perpendicular dot product between two 2D vectors
 ///////////////////////////////////////////////////////////////////////////////
-float cross_z(point2d a, point2d b, point2d c, bool invert_cw_points) {
+float cross_z(vector2d a, vector2d b, vector2d c, bool invert_cw_points) {
     if (invert_cw_points)
         return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     else
@@ -288,16 +322,16 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
     int max_y = MAX(y0, MAX(y1, y2));
     int min_y = MIN(y0, MIN(y1, y2));
 
-    point2d v0 = { .x = x0, .y = y0 };
-    point2d v1 = { .x = x1, .y = y1 };
-    point2d v2 = { .x = x2, .y = y2 };
+    vector2d v0 = { .x = x0, .y = y0 };
+    vector2d v1 = { .x = x1, .y = y1 };
+    vector2d v2 = { .x = x2, .y = y2 };
 
     bool cw = is_cw(v0, v1, v2);
 
     for (int x = min_x; x < max_x; x++) {
         for (int y = min_y; y < max_y; y++) {
             // sample from the center of the pixel, not the top-left corner
-            point2d p = { .x = x + 0.5, .y = y + 0.5 };
+            vector2d p = { .x = x + 0.5, .y = y + 0.5 };
 
             // if the point is not inside our polygon, skip fragment
             if (cross_z(v1, v2, p, cw) < 0 || cross_z(v2, v0, p, cw) < 0 || cross_z(v0, v1, p, cw) < 0)
@@ -338,21 +372,21 @@ void update(void) {
 
     // Loop all cube vertices, rotating and projecting them
     for (int i = 0; i < N_VERTICES; i++) {
-        point3d current_point = vertex_list[i];
+        vector3d current_point = vertex_list[i];
 
         // rotate the original 3d point in the x, y, and z axis
-        point3d working_vertex = current_point;
+        vector3d working_vertex = current_point;
         working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.03 * delta_time);
         working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.05 * delta_time);
         working_vertex = rotate_z(working_vertex, cube_rotation.z += 0.07 * delta_time);
 
         // apply the camera transform
-        working_vertex.x -= camera_position.x;
-        working_vertex.y -= camera_position.y;
-        working_vertex.z -= camera_position.z;
+        working_vertex.x -= cube_position.x;
+        working_vertex.y -= cube_position.y;
+        working_vertex.z -= cube_position.z;
 
-        // receives a point3d and returns a point2d projection
-        point2d projected_point = project(working_vertex);
+        // receives a vector3d and returns a vector2d projection
+        vector2d projected_point = project(working_vertex);
 
         // save the 2d projected points
         projected_points[i] = projected_point;
@@ -400,40 +434,54 @@ void render(void) {
 
     // Loop all cube face triangles to render them one by one
     for (int i = 0; i < N_TRIANGLES; i++) {
-        point2d point_a = projected_points[triangle_list[i].a];
-        point2d point_b = projected_points[triangle_list[i].b];
-        point2d point_c = projected_points[triangle_list[i].c];
+        vector2d point_a = projected_points[triangle_list[i].a];
+        vector2d point_b = projected_points[triangle_list[i].b];
+        vector2d point_c = projected_points[triangle_list[i].c];
         uint32_t triangle_color = triangle_list[i].color;
 
         // get back the vertices of each triangle face
-        point3d v0 = working_vertex_list[triangle_list[i].a];
-        point3d v1 = working_vertex_list[triangle_list[i].b];
-        point3d v2 = working_vertex_list[triangle_list[i].c];
+        vector3d v0 = working_vertex_list[triangle_list[i].a];
+        vector3d v1 = working_vertex_list[triangle_list[i].b];
+        vector3d v2 = working_vertex_list[triangle_list[i].c];
 
-        // Find the first vector and second vector
-        point3d vector_ab = { .x = v1.x - v0.x, .y = v1.y - v0.y, .z = v1.z - v0.z };
-        point3d vector_ac = { .x = v2.x - v0.x, .y = v2.y - v0.y, .z = v2.z - v0.z };
+        // Find the two triangle vectors to calculate the face normal
+        vector3d vector_ab = { .x = v1.x - v0.x, .y = v1.y - v0.y, .z = v1.z - v0.z };
+        vector3d vector_ac = { .x = v2.x - v0.x, .y = v2.y - v0.y, .z = v2.z - v0.z };
 
         // Normalize the vectors
-        float length_ab = sqrt(vector_ab.x * vector_ab.x + vector_ab.y * vector_ab.y + vector_ab.z * vector_ab.z);
-        vector_ab.x = vector_ab.x / length_ab;
-        vector_ab.y = vector_ab.y / length_ab;
-        vector_ab.z = vector_ab.z / length_ab;
-
-        float length_ac = sqrt(vector_ac.x * vector_ac.x + vector_ac.y * vector_ac.y + vector_ac.z * vector_ac.z);
-        vector_ac.x = vector_ac.x / length_ac;
-        vector_ac.y = vector_ac.y / length_ac;
-        vector_ac.z = vector_ac.z / length_ac;
+        normalize(&vector_ab);
+        normalize(&vector_ac);
 
         // Compute the surface normal (through cross-product)
-        point3d vector_out_normal = {
+        vector3d normal = {
             .x = (vector_ab.y * vector_ac.z - vector_ab.z * vector_ac.y),
             .y = (vector_ab.z * vector_ac.x - vector_ab.x * vector_ac.z),
             .z = (vector_ab.x * vector_ac.y - vector_ab.y * vector_ac.x)
         };
+        normalize(&normal);
+
+        // Get the vector distance between a point in the triangle (v0) and the camera
+        vector3d vector_normal_camera = {
+            .x = v0.x - camera_position.x,
+            .y = v0.y - camera_position.y,
+            .z = v0.z - camera_position.z
+        };
+
+        // Calculate how similar it is with the normal usinng the dot product
+        float dot_normal_camera = dot(normal, vector_normal_camera);
 
         // only render the triangle that has a positive-z-poiting normal
-        if (vector_out_normal.z > 0) {
+        if (dot_normal_camera > 0) {
+            // Define a vector to represent a light coming from a direction
+            vector3d light_direction = { .x = 0, .y = 0, .z = 1 };
+            normalize(&light_direction);
+
+            // Shade the triangle based on how aligned is the normal and the light direction
+            float light_shade_factor = dot(normal, light_direction);
+
+            // Apply a % light factor to a color
+            triangle_color = apply_light(triangle_color, light_shade_factor);
+
             // Draw a filled triangle and translates it to the screen center
             draw_filled_triangle(
                 point_a.x + (window_width / 2),
@@ -452,20 +500,8 @@ void render(void) {
                 point_b.y + (window_height / 2),
                 point_c.x + (window_width / 2),
                 point_c.y + (window_height / 2),
-                triangle_color
+                0xFF000000
             );
-
-            // Render a filled triangle using the SDL2_gfx library
-            // filledTrigonColor(
-            //     renderer,
-            //     point_a.x + (window_width / 2),
-            //     point_a.y + (window_height / 2),
-            //     point_b.x + (window_width / 2),
-            //     point_b.y + (window_height / 2),
-            //     point_c.x + (window_width / 2),
-            //     point_c.y + (window_height / 2),
-            //     triangle_color
-            // );
         }
     }
 
