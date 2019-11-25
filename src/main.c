@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL2_gfxPrimitives.h>
+#include "textures.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Define two macros to return the max and min between two values
@@ -112,6 +112,13 @@ uint32_t* color_buffer = NULL;
 SDL_Texture* color_buffer_texture;
 
 ///////////////////////////////////////////////////////////////////////////////
+// Declare texture variabless
+///////////////////////////////////////////////////////////////////////////////
+uint32_t* texture = (uint32_t*) REDBRICK_TEXTURE;
+int texture_width = 64;
+int texture_height = 64;
+
+///////////////////////////////////////////////////////////////////////////////
 // Functions to rotate 3D points in X, Y, and Z
 ///////////////////////////////////////////////////////////////////////////////
 vector3d rotate_x(vector3d point, float angle) {
@@ -219,9 +226,12 @@ void render_color_buffer() {
 // Routine to clear the entire color buffer with a single color value
 ///////////////////////////////////////////////////////////////////////////////
 void clear_color_buffer(uint32_t color) {
-    for (int x = 0; x < window_width; x++)
-        for (int y = 0; y < window_height; y++)
-            color_buffer[(window_width * y) + x] = color;
+    for (int y = 0; y < window_height; y++)
+        for (int x = 0; x < window_width; x++)
+            if (x % 10 == 0 && y % 10 == 0)
+                color_buffer[(window_width * y) + x] = 0xFF555555;
+            else
+                color_buffer[(window_width * y) + x] = color;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -328,16 +338,22 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 
     bool cw = is_cw(v0, v1, v2);
 
-    for (int x = min_x; x < max_x; x++) {
-        for (int y = min_y; y < max_y; y++) {
+    // loop all rows
+    for (int y = min_y; y < max_y; y++) {
+        // loop all columns
+        for (int x = min_x; x < max_x; x++) {
             // sample from the center of the pixel, not the top-left corner
             vector2d p = { .x = x + 0.5, .y = y + 0.5 };
 
             // if the point is not inside our polygon, skip fragment
-            if (cross_z(v1, v2, p, cw) < 0 || cross_z(v2, v0, p, cw) < 0 || cross_z(v0, v1, p, cw) < 0)
+            if (cross_z(v1, v2, p, cw) < 0 || cross_z(v2, v0, p, cw) < 0 || cross_z(v0, v1, p, cw) < 0) {
                 continue;
-            else
-                draw_pixel(x, y, color);
+            } else {
+                int texel_x = (int) x % texture_width;
+                int texel_y = (int) y % texture_height;
+                uint32_t texel = texture[(texture_width * texel_y) + texel_x];
+                draw_pixel(x, y, texel);
+            }
         }
     }
 }
