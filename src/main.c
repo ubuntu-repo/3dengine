@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <math.h>
 #include <SDL2/SDL.h>
 #include "defs.h"
@@ -10,36 +11,47 @@
 ///////////////////////////////////////////////////////////////////////////////
 const unsigned int N_VERTICES = 8;
 vec3d vertex_list[N_VERTICES] = {
-    { .x = -1, .y = -1, .z =  1},
-    { .x = -1, .y =  1, .z =  1},
-    { .x =  1, .y =  1, .z =  1},
-    { .x =  1, .y = -1, .z =  1},
-    { .x = -1, .y = -1, .z = -1},
-    { .x = -1, .y =  1, .z = -1},
-    { .x =  1, .y =  1, .z = -1},
-    { .x =  1, .y = -1, .z = -1}
+    { .x = -1, .y = -1, .z =  1 },
+    { .x = -1, .y =  1, .z =  1 },
+    { .x =  1, .y =  1, .z =  1 },
+    { .x =  1, .y = -1, .z =  1 },
+    { .x = -1, .y = -1, .z = -1 },
+    { .x = -1, .y =  1, .z = -1 },
+    { .x =  1, .y =  1, .z = -1 },
+    { .x =  1, .y = -1, .z = -1 }
+};
+
+tex2d vertex_uvs[N_VERTICES] = {
+    { .u = 0, .v = 0 },
+    { .u = 0, .v = 1 },
+    { .u = 1, .v = 1 },
+    { .u = 1, .v = 0 },
+    { .u = 0, .v = 0 },
+    { .u = 0, .v = 1 },
+    { .u = 1, .v = 1 },
+    { .u = 1, .v = 0 }
 };
 
 const unsigned int N_TRIANGLES = 6 * 2; // 6 faces, 2 triangles per face
 triangle triangle_list[N_TRIANGLES] = {
     // front
-    { .a = 0, .b = 1, .c = 2, .face_index =  1, .color = 0xFFFF0000 },
-    { .a = 2, .b = 3, .c = 0, .face_index =  1, .color = 0xFFFF0000 },
+    { .a = 0, .b = 1, .c = 2, .color = 0xFFFF0000 },
+    { .a = 2, .b = 3, .c = 0, .color = 0xFFFF0000 },
     // top
-    { .a = 1, .b = 5, .c = 6, .face_index =  2, .color = 0xFF00FF00 },
-    { .a = 6, .b = 2, .c = 1, .face_index =  2, .color = 0xFF00FF00 },
+    { .a = 1, .b = 5, .c = 6, .color = 0xFF00FF00 },
+    { .a = 6, .b = 2, .c = 1, .color = 0xFF00FF00 },
     // back
-    { .a = 5, .b = 4, .c = 7, .face_index =  3, .color = 0xFF0000FF },
-    { .a = 7, .b = 6, .c = 5, .face_index =  3, .color = 0xFF0000FF },
+    { .a = 5, .b = 4, .c = 7, .color = 0xFF0000FF },
+    { .a = 7, .b = 6, .c = 5, .color = 0xFF0000FF },
     // bottom
-    { .a = 4, .b = 0, .c = 3, .face_index =  4, .color = 0xFFFFFF00 },
-    { .a = 3, .b = 7, .c = 4, .face_index =  4, .color = 0xFFFFFF00 },
+    { .a = 4, .b = 0, .c = 3, .color = 0xFFFFFF00 },
+    { .a = 3, .b = 7, .c = 4, .color = 0xFFFFFF00 },
     // right
-    { .a = 3, .b = 2, .c = 6, .face_index =  5, .color = 0xFF00FFFF },
-    { .a = 6, .b = 7, .c = 3, .face_index =  5, .color = 0xFF00FFFF },
+    { .a = 3, .b = 2, .c = 6, .color = 0xFF00FFFF },
+    { .a = 6, .b = 7, .c = 3, .color = 0xFF00FFFF },
     // left
-    { .a = 0, .b = 5, .c = 1, .face_index =  6, .color = 0xFFFFFFFF },
-    { .a = 0, .b = 4, .c = 5, .face_index =  6, .color = 0xFFFFFFFF }
+    { .a = 0, .b = 5, .c = 1, .color = 0xFFFFFFFF },
+    { .a = 0, .b = 4, .c = 5, .color = 0xFFFFFFFF }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -62,14 +74,14 @@ vec3d camera_position = { .x = 0, .y = 0, .z = 0 };
 vec3d cube_rotation = { .x = 0, .y = 0, .z = 0 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Global variables for SDL Window, Renderer, and game status
+// Global variables for SDL Window, Renderer, and execution status
 ///////////////////////////////////////////////////////////////////////////////
-bool game_is_running = FALSE;
+bool is_running = false;
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-unsigned int last_frame_time = 0;
 unsigned window_width = 800;
 unsigned window_height = 600;
+unsigned int previous_frame_time = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declare a color buffer array and a texture that will be used to display it
@@ -120,7 +132,7 @@ vec3d rotate_z(vec3d point, float angle) {
 int initialize_window(void) {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         fprintf(stderr, "Error initializing SDL.\n");
-        return FALSE;
+        return false;
     }
 
     // Set width and height of the SDL Window with the max screen resolution
@@ -139,15 +151,15 @@ int initialize_window(void) {
     );
     if (!window) {
         fprintf(stderr, "Error creating SDL Window.\n");
-        return FALSE;
+        return false;
     }
     renderer = SDL_CreateRenderer(window, -1, 0);
     if (!renderer) {
         fprintf(stderr, "Error creating SDL Renderer.\n");
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -159,12 +171,11 @@ void process_input(void) {
 
     switch (event.type) {
         case SDL_QUIT:
-            game_is_running = FALSE;
+            is_running = false;
             break;
         case SDL_KEYDOWN:
-            // quit game
             if (event.key.keysym.sym == SDLK_ESCAPE)
-                game_is_running = FALSE;
+                is_running = false;
             break;
     }
 }
@@ -183,10 +194,7 @@ void render_color_buffer() {
 void clear_color_buffer(uint32_t color) {
     for (int y = 0; y < window_height; y++)
         for (int x = 0; x < window_width; x++)
-            if (x % 10 == 0 && y % 10 == 0)
-                color_buffer[(window_width * y) + x] = 0xFF555555;
-            else
-                color_buffer[(window_width * y) + x] = color;
+            color_buffer[(window_width * y) + x] = color;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -205,7 +213,7 @@ void draw_line(int x1, int y1, int x2, int y2, uint32_t color) {
 
     int step = abs(delta_x) >= abs(delta_y) ? abs(delta_x) : abs(delta_y);
 
-    // Algorithm is naive and slow as it uses floating point for step increment
+    // DDA is naive and slow as it uses floating point for step increment
     float x_inc = delta_x / (float) step;
     float y_inc = delta_y / (float) step;
 
@@ -225,6 +233,108 @@ void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t colo
     draw_line(x0, y0, x1, y1, color);
     draw_line(x1, y1, x2, y2, color);
     draw_line(x2, y2, x0, y0, color);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Function to swap the value of two integer variables
+///////////////////////////////////////////////////////////////////////////////
+void swap(int* a, int* b) {
+    int c = *a;
+    *a = *b;
+    *b = c;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Function to sort tringle vertices by ascending y-component
+///////////////////////////////////////////////////////////////////////////////
+void sort_triangle_vertices_y(int* x0, int* y0, int* x1, int* y1, int* x2, int* y2) {
+    if (*y0 > *y1) {
+        swap(y0, y1);
+        swap(x0, x1);
+    }
+    if (*y0 > *y2) {
+        swap(y0, y2);
+        swap(x0, x2);
+    }
+    if (*y1 > *y2) {
+        swap(y1, y2);
+        swap(x1, x2);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Draw a filled a triangle with a flat bottom
+///////////////////////////////////////////////////////////////////////////////
+void fill_flat_bottom_triangle(float x0, float y0, float x1, float y1, float x2, float y2, uint32_t color) {
+    float inv_slope_left = (x1 - x0) / (y1 - y0);
+    float inv_slope_right = (x2 - x0) / (y2 - y0);
+
+    float x_start = x0;
+    float x_end = x0;
+
+    for (int y = y0; y <= y1; y++) {
+        for (int x = (int)x_start; x <= (int)x_end; x++) {
+            draw_pixel(x, y, color);
+        }
+        x_start += inv_slope_left;
+        x_end += inv_slope_right;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Draw a filled a triangle with a flat top
+///////////////////////////////////////////////////////////////////////////////
+void fill_flat_top_triangle(float x0, float y0, float x1, float y1, float x2, float y2, uint32_t color) {
+    float inv_slope_left = (x2 - x0) / (y2 - y0);
+    float inv_slope_right = (x2 - x1) / (y2 - y1);
+
+    float x_start = x0;
+    float x_end = x1;
+
+    for (int y = y0; y < y2; y++) {
+        for (int x = (int)x_start; x <= (int)x_end; x++) {
+            draw_pixel(x, y, color);
+        }
+        x_start += inv_slope_left;
+        x_end += inv_slope_right;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Draw a filled triangle with the flat-top/flat-bottom method
+// We split the original triangle in two, half flat-bottom and half flat-top
+///////////////////////////////////////////////////////////////////////////////
+//
+//        v0
+//        /\
+//       /  \
+//      /    \
+//     /      \
+//   v1 - - - -v3
+//     \_       \
+//        \ _    \
+//           \_   \
+//              \_ \
+//                 \\
+//                  v2
+//
+///////////////////////////////////////////////////////////////////////////////
+void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
+    // We need to sort the vertices by y-coordinate ascending (y0 < y1 < y2)
+    sort_triangle_vertices_y(&x0, &y0, &x1, &y1, &x2, &y2);
+
+    if (y1 == y2) {
+        fill_flat_bottom_triangle(x0, y0, x1, y1, x2, y2, color);
+    } else if (y0 == y1) {
+        fill_flat_top_triangle(x0, y0, x1, y1, x2, y2, color);
+    } else {
+        // Create a new vertex (x3,y3) using triangle similarity
+        float x3 = (int)(x0 + ((float)(y1 - y0) / (float)(y2 - y0)) * (x2 - x0));
+        float y3 = y1;
+
+        fill_flat_bottom_triangle(x0, y0, x1, y1, x3, y3, color);
+        fill_flat_top_triangle(x1, y1, x3, y3, x2, y2, color);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -279,60 +389,12 @@ float dot(vec3d a, vec3d b) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Returns true if vertices are in clockwise order
-///////////////////////////////////////////////////////////////////////////////
-bool is_cw(vec2d a, vec2d b, vec2d c) {
-    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) >= 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Perpendicular dot product between two 2D vectors
-//////////////////////////////////////////////////////////////////////////////
-float cross_z(vec2d a, vec2d b, vec2d c, bool invert_cw_points) {
-    if (invert_cw_points)
-        return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-    else
-        return (b.x - a.x) * -(c.y - a.y) - -(b.y - a.y) * (c.x - a.x);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Draw a filled triangle
-///////////////////////////////////////////////////////////////////////////////
-void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
-    // get the bounding box of the triangle
-    int max_x = MAX(x0, MAX(x1, x2));
-    int min_x = MIN(x0, MIN(x1, x2));
-    int max_y = MAX(y0, MAX(y1, y2));
-    int min_y = MIN(y0, MIN(y1, y2));
-
-    vec2d v0 = { .x = x0, .y = y0 };
-    vec2d v1 = { .x = x1, .y = y1 };
-    vec2d v2 = { .x = x2, .y = y2 };
-
-    bool cw = is_cw(v0, v1, v2);
-
-    // loop all rows
-    for (int y = min_y; y < max_y; y++) {
-        // loop all columns
-        for (int x = min_x; x < max_x; x++) {
-            // sample from the center of the pixel, not the top-left corner
-            vec2d p = { .x = x + 0.5, .y = y + 0.5 };
-
-            // if the point is not inside our polygon, skip fragment
-            if (cross_z(v1, v2, p, cw) < 0 || cross_z(v2, v0, p, cw) < 0 || cross_z(v0, v1, p, cw) < 0) {
-                continue;
-            } else {
-                draw_pixel(x, y, color);
-            }
-        }
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Setup function to initialize game objects and game state
+// Setup function to initialize objects
 ///////////////////////////////////////////////////////////////////////////////
 void setup(void) {
-    color_buffer = (uint32_t *) malloc(sizeof(uint32_t) * (uint32_t)window_width * (uint32_t) window_height);
+    color_buffer = (uint32_t *) malloc(
+        sizeof(uint32_t) * (uint32_t)window_width * (uint32_t) window_height
+    );
 
     color_buffer_texture = SDL_CreateTexture(
         renderer,
@@ -344,8 +406,8 @@ void setup(void) {
 
     // Initialize the projection matrix elements
     float aspect_ratio = ((float)window_height / (float)window_width);
-    float fov = 60.0; // degrees
-    float fov_scale = 1 / tan((fov / 2) / 180.0 * M_PI); // radians
+    float fov = 60.0; // deg
+    float fov_scale = 1 / tan((fov / 2) / 180.0 * M_PI); // rad
     float znear = 0.1;
     float zfar = 100.0;
 
@@ -354,13 +416,6 @@ void setup(void) {
     proj_matrix.m[2][2] = zfar / (zfar - znear);
     proj_matrix.m[3][2] = (-zfar * znear) / (zfar - znear);
     proj_matrix.m[2][3] = 1.0;
-
-    // for (int i = 0; i < 4; i++) {
-    //     for (int j = 0; j < 4; j++) {
-    //         printf("[%f]  ", proj_matrix[i][j]);
-    //     }
-    //     printf("\n");
-    // }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -368,13 +423,13 @@ void setup(void) {
 ///////////////////////////////////////////////////////////////////////////////
 void update(void) {
     // Waste some time / sleep until we reach the frame target time
-    while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame_time + FRAME_TARGET_TIME));
+    while (!SDL_TICKS_PASSED(SDL_GetTicks(), previous_frame_time + FRAME_TARGET_TIME));
 
     // Get a delta time factor converted to seconds to be used to update my objects
-    float delta_time = (SDL_GetTicks() - last_frame_time) / 1000.0f;
+    float delta_time = (SDL_GetTicks() - previous_frame_time) / 1000.0f;
 
     // Store the milliseconds of the current frame
-    last_frame_time = SDL_GetTicks();
+    previous_frame_time = SDL_GetTicks();
 
     // Loop all cube vertices, rotating and projecting them
     for (int i = 0; i < N_VERTICES; i++) {
@@ -398,6 +453,10 @@ void update(void) {
         // Scale into view
         projected_point.x *= (float)window_width / 2;
         projected_point.y *= (float)window_height / 2;
+
+        // Translate into view
+        projected_point.x += (float)window_width / 2;
+        projected_point.y += (float)window_height / 2;
 
         // Save the 2d projected points
         projected_points[i] = projected_point;
@@ -433,7 +492,7 @@ void update(void) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Render function to draw game objects in the display
+// Render function to draw objects on the display
 ///////////////////////////////////////////////////////////////////////////////
 void render(void) {
     // Clear the render background with a black color
@@ -492,25 +551,25 @@ void render(void) {
         // Apply a % light factor to a color
         triangle_color = apply_light(triangle_color, light_shade_factor);
 
-        // Draw a filled triangle and translates it to the screen center
+        // Draw a filled triangle
         draw_filled_triangle(
-            point_a.x + (window_width / 2),
-            point_a.y + (window_height / 2),
-            point_b.x + (window_width / 2),
-            point_b.y + (window_height / 2),
-            point_c.x + (window_width / 2),
-            point_c.y + (window_height / 2),
+            point_a.x,
+            point_a.y,
+            point_b.x,
+            point_b.y,
+            point_c.x,
+            point_c.y,
             triangle_color
         );
         // Draw triangle face lines
         draw_triangle(
-            point_a.x + (window_width / 2),
-            point_a.y + (window_height / 2),
-            point_b.x + (window_width / 2),
-            point_b.y + (window_height / 2),
-            point_c.x + (window_width / 2),
-            point_c.y + (window_height / 2),
-            0xFF000000
+            point_a.x,
+            point_a.y,
+            point_b.x,
+            point_b.y,
+            point_c.x,
+            point_c.y,
+            0xFF00FF00
         );
     }
 
@@ -537,11 +596,11 @@ void destroy_window(void) {
 // Main function
 ///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv) {
-    game_is_running = initialize_window();
+    is_running = initialize_window();
 
     setup();
 
-    while (game_is_running) {
+    while (is_running) {
         process_input();
         update();
         render();
