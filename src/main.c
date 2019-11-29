@@ -194,7 +194,10 @@ void render_color_buffer() {
 void clear_color_buffer(uint32_t color) {
     for (int y = 0; y < window_height; y++)
         for (int x = 0; x < window_width; x++)
-            color_buffer[(window_width * y) + x] = color;
+            if (x % 5 == 0 && y % 5 == 0)
+                color_buffer[(window_width * y) + x] = 0xFF333333;
+            else
+                color_buffer[(window_width * y) + x] = color;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -252,13 +255,13 @@ void sort_triangle_vertices_y(int* x0, int* y0, int* x1, int* y1, int* x2, int* 
         swap(y0, y1);
         swap(x0, x1);
     }
-    if (*y0 > *y2) {
-        swap(y0, y2);
-        swap(x0, x2);
-    }
     if (*y1 > *y2) {
         swap(y1, y2);
         swap(x1, x2);
+    }
+    if (*y0 > *y1) {
+        swap(y0, y1);
+        swap(x0, x1);
     }
 }
 
@@ -273,8 +276,12 @@ void fill_flat_bottom_triangle(float x0, float y0, float x1, float y1, float x2,
     float x_end = x0;
 
     for (int y = y0; y <= y1; y++) {
-        for (int x = (int)x_start; x <= (int)x_end; x++) {
-            draw_pixel(x, y, color);
+        if (x_start <= x_end) {
+            for (int x = (int)x_start; x <= (int)x_end; x++)
+                draw_pixel(x, y, color);
+        } else {
+            for (int x = (int)x_end; x <= (int)x_start; x++)
+                draw_pixel(x, y, color);
         }
         x_start += inv_slope_left;
         x_end += inv_slope_right;
@@ -292,8 +299,12 @@ void fill_flat_top_triangle(float x0, float y0, float x1, float y1, float x2, fl
     float x_end = x1;
 
     for (int y = y0; y < y2; y++) {
-        for (int x = (int)x_start; x <= (int)x_end; x++) {
-            draw_pixel(x, y, color);
+        if (x_start <= x_end) {
+            for (int x = (int)x_start; x <= (int)x_end; x++)
+                draw_pixel(x, y, color);
+        } else {
+            for (int x = (int)x_end; x <= (int)x_start; x++)
+                draw_pixel(x, y, color);
         }
         x_start += inv_slope_left;
         x_end += inv_slope_right;
@@ -569,7 +580,7 @@ void render(void) {
             point_b.y,
             point_c.x,
             point_c.y,
-            0xFF00FF00
+            0xFF000000
         );
     }
 
