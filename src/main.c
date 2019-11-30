@@ -11,47 +11,47 @@
 ///////////////////////////////////////////////////////////////////////////////
 const unsigned int N_VERTICES = 8;
 vec3d vertex_list[N_VERTICES] = {
-    { .x = -1, .y = -1, .z =  1 },
-    { .x = -1, .y =  1, .z =  1 },
-    { .x =  1, .y =  1, .z =  1 },
-    { .x =  1, .y = -1, .z =  1 },
-    { .x = -1, .y = -1, .z = -1 },
-    { .x = -1, .y =  1, .z = -1 },
-    { .x =  1, .y =  1, .z = -1 },
-    { .x =  1, .y = -1, .z = -1 }
+    { .x = -1, .y = -1, .z = -1 }, // 0
+    { .x = -1, .y =  1, .z = -1 }, // 1
+    { .x =  1, .y =  1, .z = -1 }, // 2
+    { .x =  1, .y = -1, .z = -1 }, // 3
+    { .x =  1, .y =  1, .z =  1 }, // 4
+    { .x =  1, .y = -1, .z =  1 }, // 5
+    { .x = -1, .y =  1, .z =  1 }, // 6
+    { .x = -1, .y = -1, .z =  1 }  // 7
 };
 
 tex2d vertex_uvs[N_VERTICES] = {
-    { .u = 0, .v = 0 },
-    { .u = 0, .v = 1 },
-    { .u = 1, .v = 1 },
-    { .u = 1, .v = 0 },
-    { .u = 0, .v = 0 },
-    { .u = 0, .v = 1 },
-    { .u = 1, .v = 1 },
-    { .u = 1, .v = 0 }
+    { .u = 0, .v = 1 }, // 0
+    { .u = 0, .v = 0 }, // 1
+    { .u = 1, .v = 0 }, // 2
+    { .u = 1, .v = 1 }, // 3
+    { .u = 0, .v = 1 }, // 4
+    { .u = 0, .v = 0 }, // 5
+    { .u = 1, .v = 0 }, // 6
+    { .u = 1, .v = 1 }  // 7
 };
 
 const unsigned int N_TRIANGLES = 6 * 2; // 6 faces, 2 triangles per face
 triangle triangle_list[N_TRIANGLES] = {
     // front
-    { .a = 0, .b = 1, .c = 2, .color = 0xFFFF0000 },
-    { .a = 2, .b = 3, .c = 0, .color = 0xFFFF0000 },
-    // top
-    { .a = 1, .b = 5, .c = 6, .color = 0xFF00FF00 },
-    { .a = 6, .b = 2, .c = 1, .color = 0xFF00FF00 },
-    // back
-    { .a = 5, .b = 4, .c = 7, .color = 0xFF0000FF },
-    { .a = 7, .b = 6, .c = 5, .color = 0xFF0000FF },
-    // bottom
-    { .a = 4, .b = 0, .c = 3, .color = 0xFFFFFF00 },
-    { .a = 3, .b = 7, .c = 4, .color = 0xFFFFFF00 },
+    { .a = 1, .b = 2, .c = 3, .color = 0xFFFF0000 },
+    { .a = 1, .b = 3, .c = 4, .color = 0xFFFF0000 },
     // right
-    { .a = 3, .b = 2, .c = 6, .color = 0xFF00FFFF },
-    { .a = 6, .b = 7, .c = 3, .color = 0xFF00FFFF },
+    { .a = 4, .b = 3, .c = 5, .color = 0xFF00FF00 },
+    { .a = 4, .b = 5, .c = 6, .color = 0xFF00FF00 },
+    // back
+    { .a = 6, .b = 5, .c = 7, .color = 0xFF0000FF },
+    { .a = 6, .b = 7, .c = 8, .color = 0xFF0000FF },
     // left
-    { .a = 0, .b = 5, .c = 1, .color = 0xFFFFFFFF },
-    { .a = 0, .b = 4, .c = 5, .color = 0xFFFFFFFF }
+    { .a = 8, .b = 7, .c = 2, .color = 0xFFFFFF00 },
+    { .a = 8, .b = 2, .c = 1, .color = 0xFFFFFF00 },
+    // top
+    { .a = 2, .b = 7, .c = 5, .color = 0xFF00FFFF },
+    { .a = 2, .b = 5, .c = 3, .color = 0xFF00FFFF },
+    // bottom
+    { .a = 6, .b = 8, .c = 1, .color = 0xFFFFFFFF },
+    { .a = 6, .b = 1, .c = 4, .color = 0xFFFFFFFF }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -92,7 +92,7 @@ SDL_Texture* color_buffer_texture;
 ///////////////////////////////////////////////////////////////////////////////
 // Declare texture variabless
 ///////////////////////////////////////////////////////////////////////////////
-uint32_t* texture = (uint32_t*) REDBRICK_TEXTURE;
+uint32_t* texture = NULL;
 int texture_width = 64;
 int texture_height = 64;
 
@@ -247,6 +247,12 @@ void swap(int* a, int* b) {
     *b = c;
 }
 
+void swapf(float* a, float* b) {
+    float c = *a;
+    *a = *b;
+    *b = c;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Function to sort tringle vertices by ascending y-component
 ///////////////////////////////////////////////////////////////////////////////
@@ -323,11 +329,12 @@ void fill_flat_top_triangle(float x0, float y0, float x1, float y1, float x2, fl
 //     /      \
 //   v1 - - - -v3
 //     \_       \
-//        \ _    \
+//        \_     \
 //           \_   \
 //              \_ \
 //                 \\
-//                  v2
+//                   \
+//                    v2
 //
 ///////////////////////////////////////////////////////////////////////////////
 void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
@@ -415,6 +422,8 @@ void setup(void) {
         window_height
     );
 
+    texture = (uint32_t*) EAGLE_TEXTURE;
+
     // Initialize the projection matrix elements
     float aspect_ratio = ((float)window_height / (float)window_width);
     float fov = 60.0; // deg
@@ -469,6 +478,10 @@ void update(void) {
         projected_point.x += (float)window_width / 2;
         projected_point.y += (float)window_height / 2;
 
+        // Save texture coordinates
+        projected_point.u = vertex_uvs[i].u;
+        projected_point.v = vertex_uvs[i].v;
+
         // Save the 2d projected points
         projected_points[i] = projected_point;
 
@@ -479,9 +492,9 @@ void update(void) {
     // calculate the average z-depth of each triangle
     float average_depth_list[N_TRIANGLES];
     for (int i = 0; i < N_TRIANGLES; i++) {
-        average_depth_list[i] = vertex_depth_list[triangle_list[i].a];
-        average_depth_list[i] += vertex_depth_list[triangle_list[i].b];
-        average_depth_list[i] += vertex_depth_list[triangle_list[i].c];
+        average_depth_list[i] = vertex_depth_list[triangle_list[i].a - 1];
+        average_depth_list[i] += vertex_depth_list[triangle_list[i].b - 1];
+        average_depth_list[i] += vertex_depth_list[triangle_list[i].c - 1];
         average_depth_list[i] /= 3.0;
     }
 
@@ -512,15 +525,16 @@ void render(void) {
 
     // Loop all cube face triangles to render them one by one
     for (int i = 0; i < N_TRIANGLES; i++) {
-        vec3d point_a = projected_points[triangle_list[i].a];
-        vec3d point_b = projected_points[triangle_list[i].b];
-        vec3d point_c = projected_points[triangle_list[i].c];
+        vec3d point_a = projected_points[triangle_list[i].a - 1];
+        vec3d point_b = projected_points[triangle_list[i].b - 1];
+        vec3d point_c = projected_points[triangle_list[i].c - 1];
+
         uint32_t triangle_color = triangle_list[i].color;
 
         // get back the vertices of each triangle face
-        vec3d v0 = working_vertex_list[triangle_list[i].a];
-        vec3d v1 = working_vertex_list[triangle_list[i].b];
-        vec3d v2 = working_vertex_list[triangle_list[i].c];
+        vec3d v0 = working_vertex_list[triangle_list[i].a - 1];
+        vec3d v1 = working_vertex_list[triangle_list[i].b - 1];
+        vec3d v2 = working_vertex_list[triangle_list[i].c - 1];
 
         // Find the two triangle vectors to calculate the face normal
         vec3d vector_ab = { .x = v1.x - v0.x, .y = v1.y - v0.y, .z = v1.z - v0.z };
@@ -549,11 +563,12 @@ void render(void) {
         float dot_normal_camera = dot(normal, vector_normal_camera);
 
         // only render the triangle that has a positive-z-poiting normal
-        if (dot_normal_camera <= 0) {
+        if (dot_normal_camera > 0) {
             continue;
         }
+
         // Define a vector to represent a light coming from a direction
-        vec3d light_direction = { .x = 0, .y = 0, .z = 1 };
+        vec3d light_direction = { .x = 0, .y = 0, .z = -1 };
         normalize(&light_direction);
 
         // Shade the triangle based on how aligned is the normal and the light direction
@@ -564,22 +579,17 @@ void render(void) {
 
         // Draw a filled triangle
         draw_filled_triangle(
-            point_a.x,
-            point_a.y,
-            point_b.x,
-            point_b.y,
-            point_c.x,
-            point_c.y,
+            point_a.x, point_a.y,
+            point_b.x, point_b.y,
+            point_c.x, point_c.y,
             triangle_color
         );
+
         // Draw triangle face lines
         draw_triangle(
-            point_a.x,
-            point_a.y,
-            point_b.x,
-            point_b.y,
-            point_c.x,
-            point_c.y,
+            point_a.x, point_a.y,
+            point_b.x, point_b.y,
+            point_c.x, point_c.y,
             0xFF000000
         );
     }
