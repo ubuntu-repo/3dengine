@@ -367,6 +367,13 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Return the barycentric from two points and the point x and y
+///////////////////////////////////////////////////////////////////////////////
+float barycentric(vec3d p1, vec3d p2, float x, float y) {
+    return (p1.y - p2.y) * x + (p2.x - p1.x) * y + p1.x * p2.y - p2.x * p1.y;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Draw a textured triangle with the flat-top/flat-bottom method
 // We split the original triangle in two, half flat-bottom and half flat-top
 ///////////////////////////////////////////////////////////////////////////////
@@ -387,112 +394,81 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 //
 ///////////////////////////////////////////////////////////////////////////////
 void draw_textured_triangle(
-    int x1, int y1, float u1, float v1, float w1,
-    int x2, int y2, float u2, float v2, float w2,
-    int x3, int y3, float u3, float v3, float w3,
+    int x1, int y1, float z1, float u1, float v1,
+    int x2, int y2, float z2, float u2, float v2,
+    int x3, int y3, float z3, float u3, float v3,
     uint32_t* texture
 ) {
-    //float w1 = 1.0, w2 = 1.0, w3 = 1.0;
-
     // We need to sort the vertices by y-coordinate ascending (y0 < y1 < y2)
     if (y2 < y1) {
         swap(&y1, &y2);
         swap(&x1, &x2);
+        swapf(&z1, &z2);
         swapf(&u1, &u2);
         swapf(&v1, &v2);
-        swapf(&w1, &w2);
     }
     if (y3 < y1) {
         swap(&y1, &y3);
         swap(&x1, &x3);
+        swapf(&z1, &z3);
         swapf(&u1, &u3);
         swapf(&v1, &v3);
-        swapf(&w1, &w3);
     }
     if (y3 < y2) {
         swap(&y2, &y3);
         swap(&x2, &x3);
+        swapf(&z2, &z3);
         swapf(&u2, &u3);
         swapf(&v2, &v3);
-        swapf(&w2, &w3);
     }
+
+    // Create Vec3d points from the sorted coordinates
+    vec3d point_a = { .x = x1, .y = y1, .z = z1 };
+    vec3d point_b = { .x = x2, .y = y2, .z = z2 };
+    vec3d point_c = { .x = x3, .y = y3, .z = z3 };
 
     /////////////////////////////////////////////////////////////
     // Render first triangle (flat-bottom)
     /////////////////////////////////////////////////////////////
     int dy1 = y2 - y1;
     int dx1 = x2 - x1;
-    float dv1 = v2 - v1;
-    float du1 = u2 - u1;
-    float dw1 = w2 - w1;
 
     int dy2 = y3 - y1;
     int dx2 = x3 - x1;
-    float dv2 = v3 - v1;
-    float du2 = u3 - u1;
-    float dw2 = w3 - w1;
-
-    float tex_u, tex_v, tex_w;
 
     float dax_step = 0, dbx_step = 0;
-    float du1_step = 0, dv1_step = 0;
-    float du2_step = 0, dv2_step = 0;
-    float dw1_step = 0, dw2_step = 0;
 
     if (dy1) dax_step = dx1 / (float)abs(dy1);
     if (dy2) dbx_step = dx2 / (float)abs(dy2);
-
-    if (dy1) du1_step = du1 / (float)abs(dy1);
-    if (dy1) dv1_step = dv1 / (float)abs(dy1);
-    if (dy1) dw1_step = dw1 / (float)abs(dy1);
-
-    if (dy2) du2_step = du2 / (float)abs(dy2);
-    if (dy2) dv2_step = dv2 / (float)abs(dy2);
-    if (dy2) dw2_step = dw2 / (float)abs(dy2);
 
     if (dy1) {
         for (int i = y1; i <= y2; i++) {
             int ax = x1 + (float)(i - y1) * dax_step;
             int bx = x1 + (float)(i - y1) * dbx_step;
 
-            float tex_su = u1 + (float)(i - y1) * du1_step;
-            float tex_sv = v1 + (float)(i - y1) * dv1_step;
-            float tex_sw = w1 + (float)(i - y1) * dw1_step;
-
-            float tex_eu = u1 + (float)(i - y1) * du2_step;
-            float tex_ev = v1 + (float)(i - y1) * dv2_step;
-            float tex_ew = w1 + (float)(i - y1) * dw2_step;
-
             if (ax > bx) {
                 swap(&ax, &bx);
-                swapf(&tex_su, &tex_eu);
-                swapf(&tex_sv, &tex_ev);
-                swapf(&tex_sw, &tex_ew);
             }
 
-            tex_u = tex_su;
-            tex_v = tex_sv;
-            tex_w = tex_sw;
-
-            float tstep = 1.0f / ((float)(bx - ax));
-            float t = 0.0f;
-
             for (int j = ax; j < bx; j++) {
-                tex_u = (1.0f - t) * tex_su + t * tex_eu;
-                tex_v = (1.0f - t) * tex_sv + t * tex_ev;
-                tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+                float alpha = barycentric(point_b, point_c, j, i) / barycentric(point_b, point_c, point_a.x, point_a.y);
+                float beta = barycentric(point_c, point_a, j, i) / barycentric(point_c, point_a, point_b.x, point_b.y);
+                float gamma = barycentric(point_a, point_b, j, i) / barycentric(point_a, point_b, point_c.x, point_c.y);
 
-                // Apply perspective correction
-                tex_u = tex_u / tex_w;
-                tex_v = tex_v / tex_w;
+                float w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
 
-                // Scales the texture to the actual texture width and height
-                tex_u *= (texture_width - 1);
-                tex_v *= (texture_height - 1);
+                float tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
+                float ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+
+                // Scale texture coordinates to match texture width and height
+                tx = (tx * texture_width) / w;
+                ty = (ty * texture_height) / w;
+
+                tx = (int)tx % texture_width;
+                ty = (int)ty % texture_height;
 
                 // Draw a pixel sampling the texel color from the texture buffer
-                draw_pixel(j, i, texture[(texture_width * (int)tex_v) + (int)tex_u]);
-                t += tstep;
+                draw_pixel(j, i, texture[(texture_width * (int)ty) + (int)tx]);
             }
         }
     }
@@ -502,61 +478,38 @@ void draw_textured_triangle(
     /////////////////////////////////////////////////////////////
     dy1 = y3 - y2;
     dx1 = x3 - x2;
-    dv1 = v3 - v2;
-    du1 = u3 - u2;
-    dw1 = w3 - w2;
 
     if (dy1) dax_step = dx1 / (float)abs(dy1);
     if (dy2) dbx_step = dx2 / (float)abs(dy2);
-
-    du1_step = 0, dv1_step = 0;
-    if (dy1) du1_step = du1 / (float)abs(dy1);
-    if (dy1) dv1_step = dv1 / (float)abs(dy1);
-    if (dy1) dw1_step = dw1 / (float)abs(dy1);
 
     if (dy1) {
         for (int i = y2; i <= y3; i++) {
             int ax = x2 + (float)(i - y2) * dax_step;
             int bx = x1 + (float)(i - y1) * dbx_step;
 
-            float tex_su = u2 + (float)(i - y2) * du1_step;
-            float tex_sv = v2 + (float)(i - y2) * dv1_step;
-            float tex_sw = w2 + (float)(i - y2) * dw1_step;
-
-            float tex_eu = u1 + (float)(i - y1) * du2_step;
-            float tex_ev = v1 + (float)(i - y1) * dv2_step;
-            float tex_ew = w1 + (float)(i - y1) * dw2_step;
-
             if (ax > bx) {
                 swap(&ax, &bx);
-                swapf(&tex_su, &tex_eu);
-                swapf(&tex_sv, &tex_ev);
-                swapf(&tex_sw, &tex_ew);
             }
 
-            tex_u = tex_su;
-            tex_v = tex_sv;
-            tex_w = tex_sw;
-
-            float tstep = 1.0f / ((float)(bx - ax));
-            float t = 0.0f;
-
             for (int j = ax; j < bx; j++) {
-                tex_u = (1.0f - t) * tex_su + t * tex_eu;
-                tex_v = (1.0f - t) * tex_sv + t * tex_ev;
-                tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+                float alpha = barycentric(point_b, point_c, j, i) / barycentric(point_b, point_c, point_a.x, point_a.y);
+                float beta = barycentric(point_c, point_a, j, i) / barycentric(point_c, point_a, point_b.x, point_b.y);
+                float gamma = barycentric(point_a, point_b, j, i) / barycentric(point_a, point_b, point_c.x, point_c.y);
 
-                // Apply perspective correction
-                tex_u = tex_u / tex_w;
-                tex_v = tex_v / tex_w;
+                float w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
 
-                // Scales the texture to the actual texture width and height
-                tex_u *= (texture_width - 1);
-                tex_v *= (texture_height - 1);
+                float tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
+                float ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+
+                // Scale texture coordinates to match texture width and height
+                tx = (tx * texture_width) / w;
+                ty = (ty * texture_height) / w;
+
+                tx = (int)tx % texture_width;
+                ty = (int)ty % texture_height;
 
                 // Draw a pixel sampling the texel color from the texture buffer
-                draw_pixel(j, i, texture[(texture_width * (int)tex_v) + (int)tex_u]);
-                t += tstep;
+                draw_pixel(j, i, texture[(texture_width * (int)ty) + (int)tx]);
             }
         }
     }
@@ -629,7 +582,7 @@ void setup(void) {
         window_height
     );
 
-    texture = (uint32_t*) WOOD_TEXTURE;
+    texture = (uint32_t*) REDBRICK_TEXTURE;
 
     // Initialize the projection matrix elements
     float aspect_ratio = ((float)window_height / (float)window_width);
@@ -665,7 +618,7 @@ void update(void) {
         // Rotate the original 3d point in the x, y, and z axis
         vec3d working_vertex = current_point;
         working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.04 * delta_time);
-        working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.04 * delta_time);
+        working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.03 * delta_time);
         working_vertex = rotate_z(working_vertex, cube_rotation.z += 0.02 * delta_time);
 
         // After rotation, translate the cube 5 units in the z-axis
@@ -675,11 +628,17 @@ void update(void) {
         working_mesh_vertices[i] = working_vertex;
 
         // return the projection of the current point working point
-        vec3d projected_point = multiply_vec3d_mat4x4(&working_vertex, &proj_matrix);
+        // vec3d projected_point = multiply_vec3d_mat4x4(&working_vertex, &proj_matrix);
+
+        vec3d projected_point = {
+            .x = (640.0 * working_vertex.x) / working_vertex.z,
+            .y = (640.0 * working_vertex.y) / working_vertex.z,
+            .z = working_vertex.z
+        };
 
         // Scale into view
-        projected_point.x *= (float)window_width / 2;
-        projected_point.y *= (float)window_height / 2;
+        //projected_point.x *= (float)window_width / 2;
+        //projected_point.y *= (float)window_height / 2;
 
         // Translate into view
         projected_point.x += (float)window_width / 2;
@@ -793,13 +752,11 @@ void render(void) {
         //     triangle_color
         // );
 
-        printf("Z=[%f, %f, %f]\n", point_a.z, point_b.z, point_c.z);
-
         // Draw a textured triangle
         draw_textured_triangle(
-            point_a.x, point_a.y, a_uv.u, a_uv.v, point_a.z,
-            point_b.x, point_b.y, b_uv.u, b_uv.v, point_b.z,
-            point_c.x, point_c.y, c_uv.u, c_uv.v, point_c.z,
+            point_a.x, point_a.y, point_a.z, a_uv.u, a_uv.v,
+            point_b.x, point_b.y, point_b.z, b_uv.u, b_uv.v,
+            point_c.x, point_c.y, point_c.z, c_uv.u, c_uv.v,
             texture
         );
 
