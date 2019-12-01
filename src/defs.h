@@ -25,8 +25,6 @@ typedef struct {
     float x;
     float y;
     float z;
-    float u;
-    float v;
 } vec3d;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,7 +35,14 @@ typedef struct {
     int b;
     int c;
     uint32_t color;
+    int face_index;
 } triangle;
+
+typedef struct {
+    tex2d a_uv;
+    tex2d b_uv;
+    tex2d c_uv;
+} triangle_uv;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Type definition for 4x4 Matrices

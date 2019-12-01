@@ -10,7 +10,7 @@
 // Declare cube vertices and triangles
 ///////////////////////////////////////////////////////////////////////////////
 const unsigned int N_VERTICES = 8;
-vec3d vertex_list[N_VERTICES] = {
+vec3d mesh_vertices[N_VERTICES] = {
     { .x = -1, .y = -1, .z = -1 }, // 0
     { .x = -1, .y =  1, .z = -1 }, // 1
     { .x =  1, .y =  1, .z = -1 }, // 2
@@ -21,45 +21,56 @@ vec3d vertex_list[N_VERTICES] = {
     { .x = -1, .y = -1, .z =  1 }  // 7
 };
 
-tex2d vertex_uvs[N_VERTICES] = {
-    { .u = 0, .v = 1 }, // 0
-    { .u = 0, .v = 0 }, // 1
-    { .u = 1, .v = 0 }, // 2
-    { .u = 1, .v = 1 }, // 3
-    { .u = 0, .v = 1 }, // 4
-    { .u = 0, .v = 0 }, // 5
-    { .u = 1, .v = 0 }, // 6
-    { .u = 1, .v = 1 }  // 7
+const unsigned int N_FACES = 6 * 2; // 6 faces, 2 triangles per face
+triangle mesh_faces[N_FACES] = {
+    // front
+    { .a = 1, .b = 2, .c = 3, .color = 0xFFFF0000, .face_index = 0 },
+    { .a = 1, .b = 3, .c = 4, .color = 0xFFFF0000, .face_index = 1 },
+    // right
+    { .a = 4, .b = 3, .c = 5, .color = 0xFF00FF00, .face_index = 2 },
+    { .a = 4, .b = 5, .c = 6, .color = 0xFF00FF00, .face_index = 3 },
+    // // back
+    { .a = 6, .b = 5, .c = 7, .color = 0xFF0000FF, .face_index = 4 },
+    { .a = 6, .b = 7, .c = 8, .color = 0xFF0000FF, .face_index = 5 },
+    // left
+    { .a = 8, .b = 7, .c = 2, .color = 0xFFFFFF00, .face_index = 6 },
+    { .a = 8, .b = 2, .c = 1, .color = 0xFFFFFF00, .face_index = 7 },
+    // top
+    { .a = 2, .b = 7, .c = 5, .color = 0xFF00FFFF, .face_index = 8 },
+    { .a = 2, .b = 5, .c = 3, .color = 0xFF00FFFF, .face_index = 9 },
+    // bottom
+    { .a = 6, .b = 8, .c = 1, .color = 0xFFFFFFFF, .face_index = 10 },
+    { .a = 6, .b = 1, .c = 4, .color = 0xFFFFFFFF, .face_index = 11 }
 };
 
-const unsigned int N_TRIANGLES = 6 * 2; // 6 faces, 2 triangles per face
-triangle triangle_list[N_TRIANGLES] = {
+triangle_uv mesh_faces_uvs[N_FACES] = {
     // front
-    { .a = 1, .b = 2, .c = 3, .color = 0xFFFF0000 },
-    { .a = 1, .b = 3, .c = 4, .color = 0xFFFF0000 },
+    { .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 } },
+    { .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 } },
     // right
-    { .a = 4, .b = 3, .c = 5, .color = 0xFF00FF00 },
-    { .a = 4, .b = 5, .c = 6, .color = 0xFF00FF00 },
+    { .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 } },
+    { .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 } },
     // back
-    { .a = 6, .b = 5, .c = 7, .color = 0xFF0000FF },
-    { .a = 6, .b = 7, .c = 8, .color = 0xFF0000FF },
+    { .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 } },
+    { .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 } },
     // left
-    { .a = 8, .b = 7, .c = 2, .color = 0xFFFFFF00 },
-    { .a = 8, .b = 2, .c = 1, .color = 0xFFFFFF00 },
+    { .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 } },
+    { .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 } },
     // top
-    { .a = 2, .b = 7, .c = 5, .color = 0xFF00FFFF },
-    { .a = 2, .b = 5, .c = 3, .color = 0xFF00FFFF },
+    { .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 } },
+    { .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 } },
     // bottom
-    { .a = 6, .b = 8, .c = 1, .color = 0xFFFFFFFF },
-    { .a = 6, .b = 1, .c = 4, .color = 0xFFFFFFFF }
+    { .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 } },
+    { .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 } }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Array of updated vertices, triangle faces, and vertex depth values
 ///////////////////////////////////////////////////////////////////////////////
 vec3d projected_points[N_VERTICES];
+triangle_uv projected_uvs[N_VERTICES];
 float vertex_depth_list[N_VERTICES];
-vec3d working_vertex_list[N_VERTICES];
+vec3d working_mesh_vertices[N_VERTICES];
 
 ///////////////////////////////////////////////////////////////////////////////
 // Projection matrix
@@ -356,6 +367,202 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Draw a textured triangle with the flat-top/flat-bottom method
+// We split the original triangle in two, half flat-bottom and half flat-top
+///////////////////////////////////////////////////////////////////////////////
+//
+//        v0
+//        /\
+//       /  \
+//      /    \
+//     /      \
+//   v1 - - - -v3
+//     \_       \
+//        \_     \
+//           \_   \
+//              \_ \
+//                 \\
+//                   \
+//                    v2
+//
+///////////////////////////////////////////////////////////////////////////////
+void draw_textured_triangle(
+    int x1, int y1, float u1, float v1, float w1,
+    int x2, int y2, float u2, float v2, float w2,
+    int x3, int y3, float u3, float v3, float w3,
+    uint32_t* texture
+) {
+    //float w1 = 1.0, w2 = 1.0, w3 = 1.0;
+
+    // We need to sort the vertices by y-coordinate ascending (y0 < y1 < y2)
+    if (y2 < y1) {
+        swap(&y1, &y2);
+        swap(&x1, &x2);
+        swapf(&u1, &u2);
+        swapf(&v1, &v2);
+        swapf(&w1, &w2);
+    }
+    if (y3 < y1) {
+        swap(&y1, &y3);
+        swap(&x1, &x3);
+        swapf(&u1, &u3);
+        swapf(&v1, &v3);
+        swapf(&w1, &w3);
+    }
+    if (y3 < y2) {
+        swap(&y2, &y3);
+        swap(&x2, &x3);
+        swapf(&u2, &u3);
+        swapf(&v2, &v3);
+        swapf(&w2, &w3);
+    }
+
+    /////////////////////////////////////////////////////////////
+    // Render first triangle (flat-bottom)
+    /////////////////////////////////////////////////////////////
+    int dy1 = y2 - y1;
+    int dx1 = x2 - x1;
+    float dv1 = v2 - v1;
+    float du1 = u2 - u1;
+    float dw1 = w2 - w1;
+
+    int dy2 = y3 - y1;
+    int dx2 = x3 - x1;
+    float dv2 = v3 - v1;
+    float du2 = u3 - u1;
+    float dw2 = w3 - w1;
+
+    float tex_u, tex_v, tex_w;
+
+    float dax_step = 0, dbx_step = 0;
+    float du1_step = 0, dv1_step = 0;
+    float du2_step = 0, dv2_step = 0;
+    float dw1_step = 0, dw2_step = 0;
+
+    if (dy1) dax_step = dx1 / (float)abs(dy1);
+    if (dy2) dbx_step = dx2 / (float)abs(dy2);
+
+    if (dy1) du1_step = du1 / (float)abs(dy1);
+    if (dy1) dv1_step = dv1 / (float)abs(dy1);
+    if (dy1) dw1_step = dw1 / (float)abs(dy1);
+
+    if (dy2) du2_step = du2 / (float)abs(dy2);
+    if (dy2) dv2_step = dv2 / (float)abs(dy2);
+    if (dy2) dw2_step = dw2 / (float)abs(dy2);
+
+    if (dy1) {
+        for (int i = y1; i <= y2; i++) {
+            int ax = x1 + (float)(i - y1) * dax_step;
+            int bx = x1 + (float)(i - y1) * dbx_step;
+
+            float tex_su = u1 + (float)(i - y1) * du1_step;
+            float tex_sv = v1 + (float)(i - y1) * dv1_step;
+            float tex_sw = w1 + (float)(i - y1) * dw1_step;
+
+            float tex_eu = u1 + (float)(i - y1) * du2_step;
+            float tex_ev = v1 + (float)(i - y1) * dv2_step;
+            float tex_ew = w1 + (float)(i - y1) * dw2_step;
+
+            if (ax > bx) {
+                swap(&ax, &bx);
+                swapf(&tex_su, &tex_eu);
+                swapf(&tex_sv, &tex_ev);
+                swapf(&tex_sw, &tex_ew);
+            }
+
+            tex_u = tex_su;
+            tex_v = tex_sv;
+            tex_w = tex_sw;
+
+            float tstep = 1.0f / ((float)(bx - ax));
+            float t = 0.0f;
+
+            for (int j = ax; j < bx; j++) {
+                tex_u = (1.0f - t) * tex_su + t * tex_eu;
+                tex_v = (1.0f - t) * tex_sv + t * tex_ev;
+                tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+
+                // Apply perspective correction
+                tex_u = tex_u / tex_w;
+                tex_v = tex_v / tex_w;
+
+                // Scales the texture to the actual texture width and height
+                tex_u *= (texture_width - 1);
+                tex_v *= (texture_height - 1);
+
+                // Draw a pixel sampling the texel color from the texture buffer
+                draw_pixel(j, i, texture[(texture_width * (int)tex_v) + (int)tex_u]);
+                t += tstep;
+            }
+        }
+    }
+
+    /////////////////////////////////////////////////////////////
+    // Render second triangle (flat-top)
+    /////////////////////////////////////////////////////////////
+    dy1 = y3 - y2;
+    dx1 = x3 - x2;
+    dv1 = v3 - v2;
+    du1 = u3 - u2;
+    dw1 = w3 - w2;
+
+    if (dy1) dax_step = dx1 / (float)abs(dy1);
+    if (dy2) dbx_step = dx2 / (float)abs(dy2);
+
+    du1_step = 0, dv1_step = 0;
+    if (dy1) du1_step = du1 / (float)abs(dy1);
+    if (dy1) dv1_step = dv1 / (float)abs(dy1);
+    if (dy1) dw1_step = dw1 / (float)abs(dy1);
+
+    if (dy1) {
+        for (int i = y2; i <= y3; i++) {
+            int ax = x2 + (float)(i - y2) * dax_step;
+            int bx = x1 + (float)(i - y1) * dbx_step;
+
+            float tex_su = u2 + (float)(i - y2) * du1_step;
+            float tex_sv = v2 + (float)(i - y2) * dv1_step;
+            float tex_sw = w2 + (float)(i - y2) * dw1_step;
+
+            float tex_eu = u1 + (float)(i - y1) * du2_step;
+            float tex_ev = v1 + (float)(i - y1) * dv2_step;
+            float tex_ew = w1 + (float)(i - y1) * dw2_step;
+
+            if (ax > bx) {
+                swap(&ax, &bx);
+                swapf(&tex_su, &tex_eu);
+                swapf(&tex_sv, &tex_ev);
+                swapf(&tex_sw, &tex_ew);
+            }
+
+            tex_u = tex_su;
+            tex_v = tex_sv;
+            tex_w = tex_sw;
+
+            float tstep = 1.0f / ((float)(bx - ax));
+            float t = 0.0f;
+
+            for (int j = ax; j < bx; j++) {
+                tex_u = (1.0f - t) * tex_su + t * tex_eu;
+                tex_v = (1.0f - t) * tex_sv + t * tex_ev;
+                tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+
+                // Apply perspective correction
+                tex_u = tex_u / tex_w;
+                tex_v = tex_v / tex_w;
+
+                // Scales the texture to the actual texture width and height
+                tex_u *= (texture_width - 1);
+                tex_v *= (texture_height - 1);
+
+                // Draw a pixel sampling the texel color from the texture buffer
+                draw_pixel(j, i, texture[(texture_width * (int)tex_v) + (int)tex_u]);
+                t += tstep;
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Normalize a vector
 ///////////////////////////////////////////////////////////////////////////////
 void normalize(vec3d* vector) {
@@ -422,12 +629,12 @@ void setup(void) {
         window_height
     );
 
-    texture = (uint32_t*) EAGLE_TEXTURE;
+    texture = (uint32_t*) WOOD_TEXTURE;
 
     // Initialize the projection matrix elements
     float aspect_ratio = ((float)window_height / (float)window_width);
-    float fov = 60.0; // deg
-    float fov_scale = 1 / tan((fov / 2) / 180.0 * M_PI); // rad
+    float fov = 60.0; // degrees
+    float fov_scale = 1 / tan((fov / 2) / 180.0 * M_PI); // radians
     float znear = 0.1;
     float zfar = 100.0;
 
@@ -453,19 +660,19 @@ void update(void) {
 
     // Loop all cube vertices, rotating and projecting them
     for (int i = 0; i < N_VERTICES; i++) {
-        vec3d current_point = vertex_list[i];
+        vec3d current_point = mesh_vertices[i];
 
         // Rotate the original 3d point in the x, y, and z axis
         vec3d working_vertex = current_point;
         working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.04 * delta_time);
-        working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.03 * delta_time);
+        working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.04 * delta_time);
         working_vertex = rotate_z(working_vertex, cube_rotation.z += 0.02 * delta_time);
 
         // After rotation, translate the cube 5 units in the z-axis
         working_vertex.z -= -6.0;
 
         // Save the rotated and transleted vertex in a list
-        working_vertex_list[i] = working_vertex;
+        working_mesh_vertices[i] = working_vertex;
 
         // return the projection of the current point working point
         vec3d projected_point = multiply_vec3d_mat4x4(&working_vertex, &proj_matrix);
@@ -478,10 +685,6 @@ void update(void) {
         projected_point.x += (float)window_width / 2;
         projected_point.y += (float)window_height / 2;
 
-        // Save texture coordinates
-        projected_point.u = vertex_uvs[i].u;
-        projected_point.v = vertex_uvs[i].v;
-
         // Save the 2d projected points
         projected_points[i] = projected_point;
 
@@ -490,22 +693,22 @@ void update(void) {
     }
 
     // calculate the average z-depth of each triangle
-    float average_depth_list[N_TRIANGLES];
-    for (int i = 0; i < N_TRIANGLES; i++) {
-        average_depth_list[i] = vertex_depth_list[triangle_list[i].a - 1];
-        average_depth_list[i] += vertex_depth_list[triangle_list[i].b - 1];
-        average_depth_list[i] += vertex_depth_list[triangle_list[i].c - 1];
+    float average_depth_list[N_FACES];
+    for (int i = 0; i < N_FACES; i++) {
+        average_depth_list[i] = vertex_depth_list[mesh_faces[i].a - 1];
+        average_depth_list[i] += vertex_depth_list[mesh_faces[i].b - 1];
+        average_depth_list[i] += vertex_depth_list[mesh_faces[i].c - 1];
         average_depth_list[i] /= 3.0;
     }
 
     // sort triangles by their average depth value
-    for (int i = 0; i < N_TRIANGLES; i++) {
-        for (int j = 0; j < N_TRIANGLES - 1; j++) {
+    for (int i = 0; i < N_FACES; i++) {
+        for (int j = 0; j < N_FACES - 1; j++) {
             if (average_depth_list[i] > average_depth_list[j]) {
                 // swap the triangls in the original triangle list
-                triangle temp_triangle = triangle_list[i];
-                triangle_list[i] = triangle_list[j];
-                triangle_list[j] = temp_triangle;
+                triangle temp_triangle = mesh_faces[i];
+                mesh_faces[i] = mesh_faces[j];
+                mesh_faces[j] = temp_triangle;
                 // also swap the depth value in the depth array
                 float temp_depth = average_depth_list[i];
                 average_depth_list[i] = average_depth_list[j];
@@ -524,17 +727,22 @@ void render(void) {
     SDL_RenderClear(renderer);
 
     // Loop all cube face triangles to render them one by one
-    for (int i = 0; i < N_TRIANGLES; i++) {
-        vec3d point_a = projected_points[triangle_list[i].a - 1];
-        vec3d point_b = projected_points[triangle_list[i].b - 1];
-        vec3d point_c = projected_points[triangle_list[i].c - 1];
+    for (int i = 0; i < N_FACES; i++) {
+        vec3d point_a = projected_points[mesh_faces[i].a - 1];
+        vec3d point_b = projected_points[mesh_faces[i].b - 1];
+        vec3d point_c = projected_points[mesh_faces[i].c - 1];
 
-        uint32_t triangle_color = triangle_list[i].color;
+        uint32_t triangle_color = mesh_faces[i].color;
 
-        // get back the vertices of each triangle face
-        vec3d v0 = working_vertex_list[triangle_list[i].a - 1];
-        vec3d v1 = working_vertex_list[triangle_list[i].b - 1];
-        vec3d v2 = working_vertex_list[triangle_list[i].c - 1];
+        // Get back the vertices of each triangle face
+        vec3d v0 = working_mesh_vertices[mesh_faces[i].a - 1];
+        vec3d v1 = working_mesh_vertices[mesh_faces[i].b - 1];
+        vec3d v2 = working_mesh_vertices[mesh_faces[i].c - 1];
+
+        // Get the triangle UV coordinates
+        tex2d a_uv = mesh_faces_uvs[mesh_faces[i].face_index].a_uv;
+        tex2d b_uv = mesh_faces_uvs[mesh_faces[i].face_index].b_uv;
+        tex2d c_uv = mesh_faces_uvs[mesh_faces[i].face_index].c_uv;
 
         // Find the two triangle vectors to calculate the face normal
         vec3d vector_ab = { .x = v1.x - v0.x, .y = v1.y - v0.y, .z = v1.z - v0.z };
@@ -578,20 +786,30 @@ void render(void) {
         triangle_color = apply_light(triangle_color, light_shade_factor);
 
         // Draw a filled triangle
-        draw_filled_triangle(
-            point_a.x, point_a.y,
-            point_b.x, point_b.y,
-            point_c.x, point_c.y,
-            triangle_color
+        // draw_filled_triangle(
+        //     point_a.x, point_a.y,
+        //     point_b.x, point_b.y,
+        //     point_c.x, point_c.y,
+        //     triangle_color
+        // );
+
+        printf("Z=[%f, %f, %f]\n", point_a.z, point_b.z, point_c.z);
+
+        // Draw a textured triangle
+        draw_textured_triangle(
+            point_a.x, point_a.y, a_uv.u, a_uv.v, point_a.z,
+            point_b.x, point_b.y, b_uv.u, b_uv.v, point_b.z,
+            point_c.x, point_c.y, c_uv.u, c_uv.v, point_c.z,
+            texture
         );
 
         // Draw triangle face lines
-        draw_triangle(
-            point_a.x, point_a.y,
-            point_b.x, point_b.y,
-            point_c.x, point_c.y,
-            0xFF000000
-        );
+        // draw_triangle(
+        //     point_a.x, point_a.y,
+        //     point_b.x, point_b.y,
+        //     point_c.x, point_c.y,
+        //     0xFF000000
+        // );
     }
 
     // Render the color buffer using a SDL texture
