@@ -369,7 +369,7 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 ///////////////////////////////////////////////////////////////////////////////
 // Return the barycentric from two points and the point x and y
 ///////////////////////////////////////////////////////////////////////////////
-float barycentric(vec3d p1, vec3d p2, float x, float y) {
+float barycentric_coord(vec3d p1, vec3d p2, float x, float y) {
     return (p1.y - p2.y) * x + (p2.x - p1.x) * y + p1.x * p2.y - p2.x * p1.y;
 }
 
@@ -451,21 +451,27 @@ void draw_textured_triangle(
             }
 
             for (int j = ax; j < bx; j++) {
-                float alpha = barycentric(point_b, point_c, j, i) / barycentric(point_b, point_c, point_a.x, point_a.y);
-                float beta = barycentric(point_c, point_a, j, i) / barycentric(point_c, point_a, point_b.x, point_b.y);
-                float gamma = barycentric(point_a, point_b, j, i) / barycentric(point_a, point_b, point_c.x, point_c.y);
+                float alpha = barycentric_coord(point_b, point_c, j, i) / barycentric_coord(point_b, point_c, point_a.x, point_a.y);
+                float beta = barycentric_coord(point_c, point_a, j, i) / barycentric_coord(point_c, point_a, point_b.x, point_b.y);
+                float gamma = barycentric_coord(point_a, point_b, j, i) / barycentric_coord(point_a, point_b, point_c.x, point_c.y);
 
-                float w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
+                float w = 1, tx = 1, ty = 1;
 
-                float tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
-                float ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+                if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
+                    w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
+                    tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
+                    ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+                } else {
+                    tx = (u1) * alpha + (u2) * beta + (u3) * gamma;
+                    ty = (v1) * alpha + (v2) * beta + (v3) * gamma;
+                }
 
                 // Scale texture coordinates to match texture width and height
                 tx = (tx * texture_width) / w;
                 ty = (ty * texture_height) / w;
 
-                tx = (int)tx % texture_width;
-                ty = (int)ty % texture_height;
+                tx = abs((int)tx % texture_width);
+                ty = abs((int)ty % texture_height);
 
                 // Draw a pixel sampling the texel color from the texture buffer
                 draw_pixel(j, i, texture[(texture_width * (int)ty) + (int)tx]);
@@ -492,14 +498,21 @@ void draw_textured_triangle(
             }
 
             for (int j = ax; j < bx; j++) {
-                float alpha = barycentric(point_b, point_c, j, i) / barycentric(point_b, point_c, point_a.x, point_a.y);
-                float beta = barycentric(point_c, point_a, j, i) / barycentric(point_c, point_a, point_b.x, point_b.y);
-                float gamma = barycentric(point_a, point_b, j, i) / barycentric(point_a, point_b, point_c.x, point_c.y);
+                float alpha = barycentric_coord(point_b, point_c, j, i) / barycentric_coord(point_b, point_c, point_a.x, point_a.y);
+                float beta = barycentric_coord(point_c, point_a, j, i) / barycentric_coord(point_c, point_a, point_b.x, point_b.y);
+                float gamma = barycentric_coord(point_a, point_b, j, i) / barycentric_coord(point_a, point_b, point_c.x, point_c.y);
 
-                float w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
+                float w = 1, tx = 1, ty = 1;
 
-                float tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
-                float ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+                if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
+                    w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
+                    tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
+                    ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+                } else {
+                    w = 1;
+                    tx = (u1) * alpha + (u2) * beta + (u3) * gamma;
+                    ty = (v1) * alpha + (v2) * beta + (v3) * gamma;
+                }
 
                 // Scale texture coordinates to match texture width and height
                 tx = (tx * texture_width) / w;
@@ -542,7 +555,7 @@ vec3d multiply_vec3d_mat4x4(vec3d* v, mat4x4* m) {
     if (w != 0.0) {
         result_vector.x /= w;
         result_vector.y /= w;
-        result_vector.z /= w;
+        /* result_vector.z /= w; */ // some implementations also normalize z
     }
     return result_vector;
 }
@@ -617,7 +630,7 @@ void update(void) {
 
         // Rotate the original 3d point in the x, y, and z axis
         vec3d working_vertex = current_point;
-        working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.04 * delta_time);
+        working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.02 * delta_time);
         working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.03 * delta_time);
         working_vertex = rotate_z(working_vertex, cube_rotation.z += 0.02 * delta_time);
 
@@ -627,18 +640,19 @@ void update(void) {
         // Save the rotated and transleted vertex in a list
         working_mesh_vertices[i] = working_vertex;
 
-        // return the projection of the current point working point
-        // vec3d projected_point = multiply_vec3d_mat4x4(&working_vertex, &proj_matrix);
+        // Return the projection using a simple perspective divide
+        // vec3d projected_point = {
+        //     .x = (640.0 * working_vertex.x) / working_vertex.z,
+        //     .y = (640.0 * working_vertex.y) / working_vertex.z,
+        //     .z = working_vertex.z
+        // };
 
-        vec3d projected_point = {
-            .x = (640.0 * working_vertex.x) / working_vertex.z,
-            .y = (640.0 * working_vertex.y) / working_vertex.z,
-            .z = working_vertex.z
-        };
+        // Return the projection of the current point working point
+        vec3d projected_point = multiply_vec3d_mat4x4(&working_vertex, &proj_matrix);
 
         // Scale into view
-        //projected_point.x *= (float)window_width / 2;
-        //projected_point.y *= (float)window_height / 2;
+        projected_point.x *= (float)window_width / 2;
+        projected_point.y *= (float)window_height / 2;
 
         // Translate into view
         projected_point.x += (float)window_width / 2;
