@@ -224,10 +224,10 @@ void draw_textured_triangle(
                 float beta = barycentric_coord(point_c, point_a, j, i) / barycentric_coord(point_c, point_a, point_b.x, point_b.y);
                 float gamma = barycentric_coord(point_a, point_b, j, i) / barycentric_coord(point_a, point_b, point_c.x, point_c.y);
 
-                float w = 1, tx = 1, ty = 1;
+                float tw = 1, tx = 1, ty = 1;
 
                 if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
-                    w = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
+                    tw = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
                     tx = (u1 / point_a.w) * alpha + (u2 / point_b.w) * beta + (u3 / point_c.w) * gamma;
                     ty = (v1 / point_a.w) * alpha + (v2 / point_b.w) * beta + (v3 / point_c.w) * gamma;
                 } else {
@@ -236,8 +236,8 @@ void draw_textured_triangle(
                 }
 
                 // Scale texture coordinates to match texture width and height
-                tx = (tx * texture_width) / w;
-                ty = (ty * texture_height) / w;
+                tx = (tx * texture_width) / tw;
+                ty = (ty * texture_height) / tw;
 
                 tx = abs((int)tx % texture_width);
                 ty = abs((int)ty % texture_height);
@@ -271,10 +271,10 @@ void draw_textured_triangle(
                 float beta = barycentric_coord(point_c, point_a, j, i) / barycentric_coord(point_c, point_a, point_b.x, point_b.y);
                 float gamma = barycentric_coord(point_a, point_b, j, i) / barycentric_coord(point_a, point_b, point_c.x, point_c.y);
 
-                float w = 1, tx = 1, ty = 1;
+                float tw = 1, tx = 1, ty = 1;
 
                 if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
-                    w = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
+                    tw = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
                     tx = (u1 / point_a.w) * alpha + (u2 / point_b.w) * beta + (u3 / point_c.w) * gamma;
                     ty = (v1 / point_a.w) * alpha + (v2 / point_b.w) * beta + (v3 / point_c.w) * gamma;
                 } else {
@@ -283,8 +283,8 @@ void draw_textured_triangle(
                 }
 
                 // Scale texture coordinates to match texture width and height
-                tx = (tx * texture_width) / w;
-                ty = (ty * texture_height) / w;
+                tx = (tx * texture_width) / tw;
+                ty = (ty * texture_height) / tw;
 
                 tx = (int)tx % texture_width;
                 ty = (int)ty % texture_height;
