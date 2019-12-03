@@ -160,9 +160,9 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 //
 ///////////////////////////////////////////////////////////////////////////////
 void draw_textured_triangle(
-    int x1, int y1, float z1, float u1, float v1,
-    int x2, int y2, float z2, float u2, float v2,
-    int x3, int y3, float z3, float u3, float v3,
+    int x1, int y1, float z1, float w1, float u1, float v1,
+    int x2, int y2, float z2, float w2, float u2, float v2,
+    int x3, int y3, float z3, float w3, float u3, float v3,
     uint32_t* texture
 ) {
     // We need to sort the vertices by y-coordinate ascending (y0 < y1 < y2)
@@ -170,6 +170,7 @@ void draw_textured_triangle(
         swap(&y1, &y2);
         swap(&x1, &x2);
         swapf(&z1, &z2);
+        swapf(&w1, &w2);
         swapf(&u1, &u2);
         swapf(&v1, &v2);
     }
@@ -177,6 +178,7 @@ void draw_textured_triangle(
         swap(&y1, &y3);
         swap(&x1, &x3);
         swapf(&z1, &z3);
+        swapf(&w1, &w3);
         swapf(&u1, &u3);
         swapf(&v1, &v3);
     }
@@ -184,14 +186,15 @@ void draw_textured_triangle(
         swap(&y2, &y3);
         swap(&x2, &x3);
         swapf(&z2, &z3);
+        swapf(&w2, &w3);
         swapf(&u2, &u3);
         swapf(&v2, &v3);
     }
 
     // Create Vec3d points from the sorted coordinates
-    vec3d point_a = { .x = x1, .y = y1, .z = z1 };
-    vec3d point_b = { .x = x2, .y = y2, .z = z2 };
-    vec3d point_c = { .x = x3, .y = y3, .z = z3 };
+    vec3d point_a = { .x = x1, .y = y1, .z = z1, .w = w1 };
+    vec3d point_b = { .x = x2, .y = y2, .z = z2, .w = w2 };
+    vec3d point_c = { .x = x3, .y = y3, .z = z3, .w = w3 };
 
     /////////////////////////////////////////////////////////////
     // Render first triangle (flat-bottom)
@@ -224,9 +227,9 @@ void draw_textured_triangle(
                 float w = 1, tx = 1, ty = 1;
 
                 if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
-                    w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
-                    tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
-                    ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+                    w = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
+                    tx = (u1 / point_a.w) * alpha + (u2 / point_b.w) * beta + (u3 / point_c.w) * gamma;
+                    ty = (v1 / point_a.w) * alpha + (v2 / point_b.w) * beta + (v3 / point_c.w) * gamma;
                 } else {
                     tx = (u1) * alpha + (u2) * beta + (u3) * gamma;
                     ty = (v1) * alpha + (v2) * beta + (v3) * gamma;
@@ -271,11 +274,10 @@ void draw_textured_triangle(
                 float w = 1, tx = 1, ty = 1;
 
                 if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
-                    w = (1 / point_a.z) * alpha + (1 / point_b.z) * beta + (1 / point_c.z) * gamma;
-                    tx = (u1 / point_a.z) * alpha + (u2 / point_b.z) * beta + (u3 / point_c.z) * gamma;
-                    ty = (v1 / point_a.z) * alpha + (v2 / point_b.z) * beta + (v3 / point_c.z) * gamma;
+                    w = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
+                    tx = (u1 / point_a.w) * alpha + (u2 / point_b.w) * beta + (u3 / point_c.w) * gamma;
+                    ty = (v1 / point_a.w) * alpha + (v2 / point_b.w) * beta + (v3 / point_c.w) * gamma;
                 } else {
-                    w = 1;
                     tx = (u1) * alpha + (u2) * beta + (u3) * gamma;
                     ty = (v1) * alpha + (v2) * beta + (v3) * gamma;
                 }

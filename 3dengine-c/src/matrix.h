@@ -17,11 +17,16 @@ vec3d multiply_vec3d_mat4x4(vec3d* v, mat4x4* m) {
         .y = v->x * m->m[0][1] + v->y * m->m[1][1] + v->z * m->m[2][1] + m->m[3][1],
         .z = v->x * m->m[0][2] + v->y * m->m[1][2] + v->z * m->m[2][2] + m->m[3][2]
     };
+
     float w = v->x * m->m[0][3] + v->y * m->m[1][3] + v->z * m->m[2][3] + m->m[3][3];
     if (w != 0.0) {
+        // Homogenize the output vector by dividing x'/z, y'/z, and z'/z
         result_vector.x /= w;
         result_vector.y /= w;
-        /* result_vector.z /= w; */ // some implementations also normalize z
+        result_vector.z /= w;
+
+        // save the original z (depth) into the w component
+        result_vector.w = v->z;
     }
     return result_vector;
 }

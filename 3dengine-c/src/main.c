@@ -240,9 +240,9 @@ void render(void) {
 
         // Draw a textured triangle
         draw_textured_triangle(
-            point_a.x, point_a.y, point_a.z, a_uv.u, a_uv.v,
-            point_b.x, point_b.y, point_b.z, b_uv.u, b_uv.v,
-            point_c.x, point_c.y, point_c.z, c_uv.u, c_uv.v,
+            point_a.x, point_a.y, point_a.z, point_a.w, a_uv.u, a_uv.v,
+            point_b.x, point_b.y, point_b.z, point_b.w, b_uv.u, b_uv.v,
+            point_c.x, point_c.y, point_c.z, point_c.w, c_uv.u, c_uv.v,
             texture
         );
 
