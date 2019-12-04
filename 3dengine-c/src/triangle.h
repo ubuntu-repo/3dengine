@@ -18,34 +18,19 @@ typedef struct {
 ///////////////////////////////////////////////////////////////////////////////
 // Function to swap the value of two integer variables
 ///////////////////////////////////////////////////////////////////////////////
-void swap(int* a, int* b) {
+void swapi(int* a, int* b) {
     int c = *a;
     *a = *b;
     *b = c;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Function to swap the value of two float variables
+///////////////////////////////////////////////////////////////////////////////
 void swapf(float* a, float* b) {
     float c = *a;
     *a = *b;
     *b = c;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Function to sort tringle vertices by ascending y-component
-///////////////////////////////////////////////////////////////////////////////
-void sort_triangle_vertices_y(int* x0, int* y0, int* x1, int* y1, int* x2, int* y2) {
-    if (*y0 > *y1) {
-        swap(y0, y1);
-        swap(x0, x1);
-    }
-    if (*y1 > *y2) {
-        swap(y1, y2);
-        swap(x1, x2);
-    }
-    if (*y0 > *y1) {
-        swap(y0, y1);
-        swap(x0, x1);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,7 +109,18 @@ void fill_flat_top_triangle(float x0, float y0, float x1, float y1, float x2, fl
 ///////////////////////////////////////////////////////////////////////////////
 void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
     // We need to sort the vertices by y-coordinate ascending (y0 < y1 < y2)
-    sort_triangle_vertices_y(&x0, &y0, &x1, &y1, &x2, &y2);
+    if (y0 > y1) {
+        swapi(&y0, &y1);
+        swapi(&x0, &x1);
+    }
+    if (y1 > y2) {
+        swapi(&y1, &y2);
+        swapi(&x1, &x2);
+    }
+    if (y0 > y1) {
+        swapi(&y0, &y1);
+        swapi(&x0, &x1);
+    }
 
     if (y1 == y2) {
         fill_flat_bottom_triangle(x0, y0, x1, y1, x2, y2, color);
@@ -138,6 +134,39 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
         fill_flat_bottom_triangle(x0, y0, x1, y1, x3, y3, color);
         fill_flat_top_triangle(x1, y1, x3, y3, x2, y2, color);
     }
+}
+
+
+vec2d get_texel_coords(
+    vec3d point_a, vec3d point_b, vec3d point_c, vec3d point_p,
+    float u0, float v0, float u1, float v1, float u2, float v2
+) {
+    float alpha = area_triangle(point_c, point_b, point_p) / area_triangle(point_a, point_b, point_c);
+    float beta = area_triangle(point_a, point_c, point_p) / area_triangle(point_a, point_b, point_c);
+    float gamma = area_triangle(point_a, point_b, point_p) / area_triangle(point_a, point_b, point_c);
+
+    // printf("ALPHA=%.2f, BETA=%.2f, GAMMA=%.2f, (A+B+G)=%.2f\n", alpha, beta, gamma, alpha+beta+gamma);
+
+    float tw = 1, tx = 1, ty = 1;
+
+    if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
+        tw = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
+        tx = (u0 / point_a.w) * alpha + (u1 / point_b.w) * beta + (u2 / point_c.w) * gamma;
+        ty = (v0 / point_a.w) * alpha + (v1 / point_b.w) * beta + (v2 / point_c.w) * gamma;
+    }
+
+    // Scale texture coordinates to match texture width and height
+    tx = (tx * texture_width) / tw;
+    ty = (ty * texture_height) / tw;
+
+    tx = abs((int)tx % texture_width);
+    ty = abs((int)ty % texture_height);
+
+    vec2d texel_coords = {
+        .x = abs((int)tx % texture_width),
+        .y = abs((int)ty % texture_height)
+    };
+    return texel_coords;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,50 +190,50 @@ void draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32
 //
 ///////////////////////////////////////////////////////////////////////////////
 void draw_textured_triangle(
+    int x0, int y0, float z0, float w0, float u0, float v0,
     int x1, int y1, float z1, float w1, float u1, float v1,
     int x2, int y2, float z2, float w2, float u2, float v2,
-    int x3, int y3, float z3, float w3, float u3, float v3,
     uint32_t* texture
 ) {
     // We need to sort the vertices by y-coordinate ascending (y0 < y1 < y2)
+    if (y1 < y0) {
+        swapi(&y0, &y1);
+        swapi(&x0, &x1);
+        swapf(&z0, &z1);
+        swapf(&w0, &w1);
+        swapf(&u0, &u1);
+        swapf(&v0, &v1);
+    }
+    if (y2 < y0) {
+        swapi(&y0, &y2);
+        swapi(&x0, &x2);
+        swapf(&z0, &z2);
+        swapf(&w0, &w2);
+        swapf(&u0, &u2);
+        swapf(&v0, &v2);
+    }
     if (y2 < y1) {
-        swap(&y1, &y2);
-        swap(&x1, &x2);
+        swapi(&y1, &y2);
+        swapi(&x1, &x2);
         swapf(&z1, &z2);
         swapf(&w1, &w2);
         swapf(&u1, &u2);
         swapf(&v1, &v2);
     }
-    if (y3 < y1) {
-        swap(&y1, &y3);
-        swap(&x1, &x3);
-        swapf(&z1, &z3);
-        swapf(&w1, &w3);
-        swapf(&u1, &u3);
-        swapf(&v1, &v3);
-    }
-    if (y3 < y2) {
-        swap(&y2, &y3);
-        swap(&x2, &x3);
-        swapf(&z2, &z3);
-        swapf(&w2, &w3);
-        swapf(&u2, &u3);
-        swapf(&v2, &v3);
-    }
 
-    // Create Vec3d points from the sorted coordinates
-    vec3d point_a = { .x = x1, .y = y1, .z = z1, .w = w1 };
-    vec3d point_b = { .x = x2, .y = y2, .z = z2, .w = w2 };
-    vec3d point_c = { .x = x3, .y = y3, .z = z3, .w = w3 };
+    // Create vec3d points from the sorted coordinates
+    vec3d point_a = { .x = x0, .y = y0, .z = z0, .w = w0 };
+    vec3d point_b = { .x = x1, .y = y1, .z = z1, .w = w1 };
+    vec3d point_c = { .x = x2, .y = y2, .z = z2, .w = w2 };
 
     /////////////////////////////////////////////////////////////
     // Render first triangle (flat-bottom)
     /////////////////////////////////////////////////////////////
-    int dy1 = y2 - y1;
-    int dx1 = x2 - x1;
+    int dy1 = y1 - y0;
+    int dx1 = x1 - x0;
 
-    int dy2 = y3 - y1;
-    int dx2 = x3 - x1;
+    int dy2 = y2 - y0;
+    int dx2 = x2 - x0;
 
     float dax_step = 0, dbx_step = 0;
 
@@ -212,42 +241,20 @@ void draw_textured_triangle(
     if (dy2) dbx_step = dx2 / (float)abs(dy2);
 
     if (dy1) {
-        for (int i = y1; i <= y2; i++) {
-            int ax = x1 + (float)(i - y1) * dax_step;
-            int bx = x1 + (float)(i - y1) * dbx_step;
+        for (int y = y0; y <= y1; y++) {
+            int ax = x0 + (float)(y - y0) * dax_step;
+            int bx = x0 + (float)(y - y0) * dbx_step;
 
             if (ax > bx) {
-                swap(&ax, &bx);
+                swapi(&ax, &bx);
             }
 
-            for (int j = ax; j < bx; j++) {
-                vec3d point_p = { .x = j, .y = i };
-                float alpha = area_triangle(point_c, point_b, point_p) / area_triangle(point_a, point_b, point_c);
-                float beta = area_triangle(point_a, point_c, point_p) / area_triangle(point_a, point_b, point_c);
-                float gamma = area_triangle(point_a, point_b, point_p) / area_triangle(point_a, point_b, point_c);
-
-                // printf("ALPHA=%.2f, BETA=%.2f, GAMMA=%.2f, (A+B+G)=%.2f\n", alpha, beta, gamma, alpha+beta+gamma);
-
-                float tw = 1, tx = 1, ty = 1;
-
-                if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
-                    tw = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
-                    tx = (u1 / point_a.w) * alpha + (u2 / point_b.w) * beta + (u3 / point_c.w) * gamma;
-                    ty = (v1 / point_a.w) * alpha + (v2 / point_b.w) * beta + (v3 / point_c.w) * gamma;
-                } else {
-                    tx = (u1) * alpha + (u2) * beta + (u3) * gamma;
-                    ty = (v1) * alpha + (v2) * beta + (v3) * gamma;
-                }
-
-                // Scale texture coordinates to match texture width and height
-                tx = (tx * texture_width) / tw;
-                ty = (ty * texture_height) / tw;
-
-                tx = abs((int)tx % texture_width);
-                ty = abs((int)ty % texture_height);
+            for (int x = ax; x < bx; x++) {
+                vec3d point_p = { .x = x, .y = y };
+                vec2d tex_coords = get_texel_coords(point_a, point_b, point_c, point_p, u0, v0, u1, v1, u2, v2);
 
                 // Draw a pixel sampling the texel color from the texture buffer
-                draw_pixel(j, i, texture[(texture_width * (int)ty) + (int)tx]);
+                draw_pixel(x, y, texture[(texture_width * (int)tex_coords.y) + (int)tex_coords.x]);
             }
         }
     }
@@ -255,49 +262,27 @@ void draw_textured_triangle(
     /////////////////////////////////////////////////////////////
     // Render second triangle (flat-top)
     /////////////////////////////////////////////////////////////
-    dy1 = y3 - y2;
-    dx1 = x3 - x2;
+    dy1 = y2 - y1;
+    dx1 = x2 - x1;
 
     if (dy1) dax_step = dx1 / (float)abs(dy1);
     if (dy2) dbx_step = dx2 / (float)abs(dy2);
 
     if (dy1) {
-        for (int i = y2; i <= y3; i++) {
-            int ax = x2 + (float)(i - y2) * dax_step;
-            int bx = x1 + (float)(i - y1) * dbx_step;
+        for (int y = y1; y <= y2; y++) {
+            int ax = x1 + (float)(y - y1) * dax_step;
+            int bx = x0 + (float)(y - y0) * dbx_step;
 
             if (ax > bx) {
-                swap(&ax, &bx);
+                swapi(&ax, &bx);
             }
 
-            for (int j = ax; j < bx; j++) {
-                vec3d point_p = { .x = j, .y = i };
-                float alpha = area_triangle(point_c, point_b, point_p) / area_triangle(point_a, point_b, point_c);
-                float beta = area_triangle(point_a, point_c, point_p) / area_triangle(point_a, point_b, point_c);
-                float gamma = area_triangle(point_a, point_b, point_p) / area_triangle(point_a, point_b, point_c);
-
-                // printf("ALPHA=%.2f, BETA=%.2f, GAMMA=%.2f, (A+B+G)=%.2f\n", alpha, beta, gamma, alpha+beta+gamma);
-
-                float tw = 1, tx = 1, ty = 1;
-
-                if (point_a.z != 0.0 && point_b.z != 0.0 && point_c.z != 0.0) {
-                    tw = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
-                    tx = (u1 / point_a.w) * alpha + (u2 / point_b.w) * beta + (u3 / point_c.w) * gamma;
-                    ty = (v1 / point_a.w) * alpha + (v2 / point_b.w) * beta + (v3 / point_c.w) * gamma;
-                } else {
-                    tx = (u1) * alpha + (u2) * beta + (u3) * gamma;
-                    ty = (v1) * alpha + (v2) * beta + (v3) * gamma;
-                }
-
-                // Scale texture coordinates to match texture width and height
-                tx = (tx * texture_width) / tw;
-                ty = (ty * texture_height) / tw;
-
-                tx = abs((int)tx % texture_width);
-                ty = abs((int)ty % texture_height);
+            for (int x = ax; x < bx; x++) {
+                vec3d point_p = { .x = x, .y = y };
+                vec2d tex_coords = get_texel_coords(point_a, point_b, point_c, point_p, u0, v0, u1, v1, u2, v2);
 
                 // Draw a pixel sampling the texel color from the texture buffer
-                draw_pixel(j, i, texture[(texture_width * (int)ty) + (int)tx]);
+                draw_pixel(x, y, texture[(texture_width * (int)tex_coords.y) + (int)tex_coords.x]);
             }
         }
     }
