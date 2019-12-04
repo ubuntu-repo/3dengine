@@ -49,10 +49,11 @@ void sort_triangle_vertices_y(int* x0, int* y0, int* x1, int* y1, int* x2, int* 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Return the barycentric from two points and the point x and y
+// Return the triangle area using the cross product
 ///////////////////////////////////////////////////////////////////////////////
-float barycentric_coord(vec3d p1, vec3d p2, float x, float y) {
-    return (p1.y - p2.y) * x + (p2.x - p1.x) * y + p1.x * p2.y - p2.x * p1.y;
+float area_triangle(vec3d p1, vec3d p2, vec3d p3) {
+    float cross_magnitude = vector_length(vector_cross(vector_sub(p1, p2), vector_sub(p3, p2)));
+    return cross_magnitude / 2;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -220,9 +221,12 @@ void draw_textured_triangle(
             }
 
             for (int j = ax; j < bx; j++) {
-                float alpha = barycentric_coord(point_b, point_c, j, i) / barycentric_coord(point_b, point_c, point_a.x, point_a.y);
-                float beta = barycentric_coord(point_c, point_a, j, i) / barycentric_coord(point_c, point_a, point_b.x, point_b.y);
-                float gamma = barycentric_coord(point_a, point_b, j, i) / barycentric_coord(point_a, point_b, point_c.x, point_c.y);
+                vec3d point_p = { .x = j, .y = i };
+                float alpha = area_triangle(point_c, point_b, point_p) / area_triangle(point_a, point_b, point_c);
+                float beta = area_triangle(point_a, point_c, point_p) / area_triangle(point_a, point_b, point_c);
+                float gamma = area_triangle(point_a, point_b, point_p) / area_triangle(point_a, point_b, point_c);
+
+                // printf("ALPHA=%.2f, BETA=%.2f, GAMMA=%.2f, (A+B+G)=%.2f\n", alpha, beta, gamma, alpha+beta+gamma);
 
                 float tw = 1, tx = 1, ty = 1;
 
@@ -267,9 +271,12 @@ void draw_textured_triangle(
             }
 
             for (int j = ax; j < bx; j++) {
-                float alpha = barycentric_coord(point_b, point_c, j, i) / barycentric_coord(point_b, point_c, point_a.x, point_a.y);
-                float beta = barycentric_coord(point_c, point_a, j, i) / barycentric_coord(point_c, point_a, point_b.x, point_b.y);
-                float gamma = barycentric_coord(point_a, point_b, j, i) / barycentric_coord(point_a, point_b, point_c.x, point_c.y);
+                vec3d point_p = { .x = j, .y = i };
+                float alpha = area_triangle(point_c, point_b, point_p) / area_triangle(point_a, point_b, point_c);
+                float beta = area_triangle(point_a, point_c, point_p) / area_triangle(point_a, point_b, point_c);
+                float gamma = area_triangle(point_a, point_b, point_p) / area_triangle(point_a, point_b, point_c);
+
+                // printf("ALPHA=%.2f, BETA=%.2f, GAMMA=%.2f, (A+B+G)=%.2f\n", alpha, beta, gamma, alpha+beta+gamma);
 
                 float tw = 1, tx = 1, ty = 1;
 
@@ -286,8 +293,8 @@ void draw_textured_triangle(
                 tx = (tx * texture_width) / tw;
                 ty = (ty * texture_height) / tw;
 
-                tx = (int)tx % texture_width;
-                ty = (int)ty % texture_height;
+                tx = abs((int)tx % texture_width);
+                ty = abs((int)ty % texture_height);
 
                 // Draw a pixel sampling the texel color from the texture buffer
                 draw_pixel(j, i, texture[(texture_width * (int)ty) + (int)tx]);

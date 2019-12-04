@@ -202,8 +202,8 @@ void render(void) {
         vec3d vector_ac = { .x = v2.x - v0.x, .y = v2.y - v0.y, .z = v2.z - v0.z };
 
         // Normalize the vectors
-        normalize(&vector_ab);
-        normalize(&vector_ac);
+        vector_normalize(&vector_ab);
+        vector_normalize(&vector_ac);
 
         // Compute the surface normal (through cross-product)
         vec3d normal = {
@@ -211,7 +211,7 @@ void render(void) {
             .y = (vector_ab.z * vector_ac.x - vector_ab.x * vector_ac.z),
             .z = (vector_ab.x * vector_ac.y - vector_ab.y * vector_ac.x)
         };
-        normalize(&normal);
+        vector_normalize(&normal);
 
         // Get the vector distance between a point in the triangle (v0) and the camera
         vec3d vector_normal_camera = {
@@ -221,7 +221,7 @@ void render(void) {
         };
 
         // Calculate how similar it is with the normal usinng the dot product
-        float dot_normal_camera = dot(normal, vector_normal_camera);
+        float dot_normal_camera = vector_dot(normal, vector_normal_camera);
 
         // only render the triangle that has a positive-z-poiting normal
         if (dot_normal_camera > 0) {
@@ -230,10 +230,10 @@ void render(void) {
 
         // Define a vector to represent a light coming from a direction
         vec3d light_direction = { .x = 0, .y = 0, .z = -1 };
-        normalize(&light_direction);
+        vector_normalize(&light_direction);
 
         // Shade the triangle based on how aligned is the normal and the light direction
-        float light_shade_factor = dot(normal, light_direction);
+        float light_shade_factor = vector_dot(normal, light_direction);
 
         // Apply a % light factor to a color
         triangle_color = apply_light(triangle_color, light_shade_factor);
