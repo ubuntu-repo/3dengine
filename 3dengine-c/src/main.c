@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <SDL2/SDL.h>
+#include "upng.h"
 #include "graphics.h"
 #include "texture.h"
 #include "vector.h"
@@ -76,13 +77,24 @@ void setup(void) {
 
     color_buffer_texture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_ARGB8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_STREAMING,
         window_width,
         window_height
     );
 
-    texture = (uint32_t*) REDBRICK_TEXTURE;
+    //texture = (uint32_t*) REDBRICK_TEXTURE;
+    // allocate the total amount of bytes in memory to hold our wall texture
+    mesh_texture = (uint32_t*) malloc(sizeof(uint32_t) * (uint32_t)texture_width * (uint32_t)texture_height);
+
+    // load an external texture using the upng library to decode the file
+    png_texture = upng_new_from_file("./data/pikuma.png");
+    if (png_texture != NULL) {
+        upng_decode(png_texture);
+        if (upng_get_error(png_texture) == UPNG_EOK)
+            mesh_texture = (uint32_t*)upng_get_buffer(png_texture);
+    }
+
 
     // Initialize the projection matrix elements
     float aspect_ratio = ((float)window_height / (float)window_width);
@@ -243,7 +255,7 @@ void render(void) {
             point_a.x, point_a.y, point_a.z, point_a.w, a_uv.u, a_uv.v,
             point_b.x, point_b.y, point_b.z, point_b.w, b_uv.u, b_uv.v,
             point_c.x, point_c.y, point_c.z, point_c.w, c_uv.u, c_uv.v,
-            texture
+            mesh_texture
         );
 
         // Draw a filled triangle
