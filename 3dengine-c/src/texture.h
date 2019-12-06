@@ -1,6 +1,8 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
+#define TEXTURE_FILENAME "./images/pikuma.png"
+
 typedef struct {
     float u;
     float v;

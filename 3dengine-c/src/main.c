@@ -4,13 +4,14 @@
 #include <math.h>
 #include <SDL2/SDL.h>
 #include "upng.h"
+#include "arraylist.h"
 #include "graphics.h"
 #include "texture.h"
 #include "vector.h"
 #include "matrix.h"
 #include "triangle.h"
-#include "../data/mesh_data.h"
-#include "../data/texture_data.h"
+#include "mesh_data.h"
+#include "texture_data.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Array of updated vertices, triangle faces, and vertex depth values
@@ -88,13 +89,12 @@ void setup(void) {
     mesh_texture = (uint32_t*) malloc(sizeof(uint32_t) * (uint32_t)texture_width * (uint32_t)texture_height);
 
     // load an external texture using the upng library to decode the file
-    png_texture = upng_new_from_file("./data/pikuma.png");
+    png_texture = upng_new_from_file(TEXTURE_FILENAME);
     if (png_texture != NULL) {
         upng_decode(png_texture);
         if (upng_get_error(png_texture) == UPNG_EOK)
             mesh_texture = (uint32_t*)upng_get_buffer(png_texture);
     }
-
 
     // Initialize the projection matrix elements
     float aspect_ratio = ((float)window_height / (float)window_width);
@@ -102,12 +102,13 @@ void setup(void) {
     float fov_scale = 1 / tan((fov / 2) / 180.0 * M_PI); // radians
     float znear = 0.1;
     float zfar = 100.0;
-
     proj_matrix.m[0][0] = aspect_ratio * fov_scale;
     proj_matrix.m[1][1] = fov_scale;
     proj_matrix.m[2][2] = zfar / (zfar - znear);
     proj_matrix.m[3][2] = (-zfar * znear) / (zfar - znear);
     proj_matrix.m[2][3] = 1.0;
+
+    load_mesh_data();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,10 +126,9 @@ void update(void) {
 
     // Loop all cube vertices, rotating and projecting them
     for (int i = 0; i < N_VERTICES; i++) {
-        vec3d current_point = mesh_vertices[i];
+        vec3d working_vertex = *(vec3d*)arraylist_get(&mesh_vertices, i);
 
         // Rotate the original 3d point in the x, y, and z axis
-        vec3d working_vertex = current_point;
         working_vertex = rotate_x(working_vertex, cube_rotation.x += 0.02 * delta_time);
         working_vertex = rotate_y(working_vertex, cube_rotation.y += 0.03 * delta_time);
         working_vertex = rotate_z(working_vertex, cube_rotation.z += 0.02 * delta_time);
@@ -251,20 +251,20 @@ void render(void) {
         triangle_color = apply_light(triangle_color, light_shade_factor);
 
         // Draw a textured triangle
-        draw_textured_triangle(
-            point_a.x, point_a.y, point_a.z, point_a.w, a_uv.u, a_uv.v,
-            point_b.x, point_b.y, point_b.z, point_b.w, b_uv.u, b_uv.v,
-            point_c.x, point_c.y, point_c.z, point_c.w, c_uv.u, c_uv.v,
-            mesh_texture
-        );
+        // draw_textured_triangle(
+        //     point_a.x, point_a.y, point_a.z, point_a.w, a_uv.u, a_uv.v,
+        //     point_b.x, point_b.y, point_b.z, point_b.w, b_uv.u, b_uv.v,
+        //     point_c.x, point_c.y, point_c.z, point_c.w, c_uv.u, c_uv.v,
+        //     mesh_texture
+        // );
 
         // Draw a filled triangle
-        // draw_filled_triangle(
-        //     point_a.x, point_a.y,
-        //     point_b.x, point_b.y,
-        //     point_c.x, point_c.y,
-        //     triangle_color
-        // );
+        draw_filled_triangle(
+            point_a.x, point_a.y,
+            point_b.x, point_b.y,
+            point_c.x, point_c.y,
+            triangle_color
+        );
 
         // Draw triangle face lines
         // draw_triangle(
@@ -299,6 +299,9 @@ int main(int argc, char **argv) {
     }
 
     destroy_window();
+
+    free(color_buffer);
+    arraylist_free(&mesh_vertices);
 
     return 0;
 }

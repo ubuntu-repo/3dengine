@@ -4,7 +4,8 @@
 const unsigned int N_VERTICES = 8;
 const unsigned int N_FACES = 6 * 2; // 6 faces, 2 triangles per face
 
-vec3d mesh_vertices[N_VERTICES] = {
+// Test dynamic array
+vec3d vertices[N_VERTICES] = {
     { .x = -1, .y = -1, .z = -1, .w = 1 }, // 0
     { .x = -1, .y =  1, .z = -1, .w = 1 }, // 1
     { .x =  1, .y =  1, .z = -1, .w = 1 }, // 2
@@ -14,6 +15,15 @@ vec3d mesh_vertices[N_VERTICES] = {
     { .x = -1, .y =  1, .z =  1, .w = 1 }, // 6
     { .x = -1, .y = -1, .z =  1, .w = 1 }  // 7
 };
+
+arraylist mesh_vertices;
+
+void load_mesh_data() {
+    arraylist_init(&mesh_vertices);
+    for (int i = 0; i < N_VERTICES; i++) {
+        arraylist_add(&mesh_vertices, &vertices[i]);
+    }
+}
 
 triangle mesh_faces[N_FACES] = {
     // front
